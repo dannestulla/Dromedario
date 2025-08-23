@@ -1,4 +1,3 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -21,8 +20,8 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
-            implementation("io.ktor:ktor-client-android:2.3.1")
-            implementation("io.ktor:ktor-client-okhttp:2.3.1")
+            implementation(libs.ktor.client.android)
+            implementation(libs.ktor.client.okhttp)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -34,11 +33,10 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(projects.shared)
-
-            implementation("io.ktor:ktor-client-core:2.3.1")
-            implementation("io.ktor:ktor-client-websockets:2.3.1")
-            implementation("io.ktor:ktor-client-content-negotiation:2.3.1")
-            implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.1")
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.websockets)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -49,6 +47,15 @@ kotlin {
 android {
     namespace = "br.gohan.dromedario"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
+
+    buildTypes {
+        debug {
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
+        release {
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
+        }
+    }
 
     defaultConfig {
         applicationId = "br.gohan.dromedario"

@@ -16,11 +16,12 @@ application {
 dependencies {
     implementation(projects.shared)
     implementation(libs.logback)
-    implementation("io.ktor:ktor-server-core:2.3.1")
-    implementation("io.ktor:ktor-server-netty:2.3.1")
-    implementation("io.ktor:ktor-server-websockets:2.3.1")
-    implementation("io.ktor:ktor-server-content-negotiation:2.3.1")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.1")
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.netty)
+    implementation(libs.ktor.server.websockets)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.kmongo.coroutine)
 // se precisar de client no server
     testImplementation(libs.kotlin.testJunit)
 }
