@@ -1,7 +1,12 @@
-package br.gohan.dromedario
+package br.gohan.dromedario.presenter
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import br.gohan.dromedario.data.EventType
+import br.gohan.dromedario.data.RemoveWaypointData
+import br.gohan.dromedario.data.RouteStateModel
+import br.gohan.dromedario.data.Waypoint
+import br.gohan.dromedario.data.MessageModel
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.webSocket
@@ -12,49 +17,48 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlin.time.Duration.Companion.seconds
 
-class MainViewModel(
+class ClientViewModel(
     private val client: HttpClient
 ) : ViewModel() {
-    private val _outgoingFlow = MutableSharedFlow<String>()
-    val outgoingFlow: SharedFlow<String?> = _outgoingFlow
+    private val _outgoingFlow = MutableSharedFlow<MessageModel>()
+    val outgoingFlow: SharedFlow<MessageModel?> = _outgoingFlow
 
-    private val _incomingFlow = MutableStateFlow<List<String>>(emptyList())
-    val incomingFlow: StateFlow<List<String>> = _incomingFlow
+    private val _incomingFlow = MutableStateFlow(RouteStateModel())
+    val incomingFlow: StateFlow<RouteStateModel> = _incomingFlow
 
-    fun sendMessage(string: String) {
+    fun sendMessage(address: String, index: Int) {
         viewModelScope.launch {
-            _outgoingFlow.emit(string)
+            val message = MessageModel(
+                event = EventType.ADD_WAYPOINT,
+                data = Json.Default.encodeToJsonElement(
+                    Waypoint(
+                        index = index,
+                        address = address,
+                        latitude = 1.2,
+                        longitude = 1.1
+                    )
+                )
+            )
+            _outgoingFlow.emit(message)
         }
     }
-    
-    fun addWaypoint(waypoint: Waypoint) {
+
+    fun deleteMessage(index: Int) {
         viewModelScope.launch {
-            val message = WebSocketMessage(
-                event = AppEvents.ADD_ADDRESS,
-                data = Json.encodeToJsonElement(waypoint)
+            val message = MessageModel(
+                event = EventType.REMOVE_WAYPOINT,
+                data = Json.Default.encodeToJsonElement(
+                    RemoveWaypointData(
+                        waypointIndex = index
+                    )
+                )
             )
-            val jsonString = Json.encodeToString(message)
-            Napier.d("Client: enviando addWaypoint: $jsonString")
-            _outgoingFlow.emit(jsonString)
-        }
-    }
-    
-    fun sendTestMessage() {
-        viewModelScope.launch {
-            val testWaypoint = Waypoint(
-                address = "Rua Teste, 123",
-                latitude = -30.0346,
-                longitude = -51.2177
-            )
-            addWaypoint(testWaypoint)
+            _outgoingFlow.emit(message)
         }
     }
 
@@ -63,18 +67,22 @@ class MainViewModel(
             try {
                 client.webSocket(urlString = url) {
                     launch {
+                        // Client to server
                         outgoingFlow
                             .collect { msg ->
                                 Napier.d("Client: enviando mensagem para servidor: $msg")
-                                msg?.let { send(Frame.Text(it)) }
+                                val message = Json.Default.encodeToString(msg)
+                                send(Frame.Text(message))
                             }
                     }
 
+                    // Server to client
                     for (frame in incoming) {
                         if (frame is Frame.Text) {
                             val text = frame.readText()
                             Napier.d("Client: recebendo mensagem do servidor: $text")
-                            _incomingFlow.value = _incomingFlow.value + text
+                            val incomingObject = Json.Default.decodeFromString<RouteStateModel>(text)
+                            _incomingFlow.value = incomingObject
                         }
                     }
                 }
