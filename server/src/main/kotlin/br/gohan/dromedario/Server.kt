@@ -1,6 +1,8 @@
 package br.gohan.dromedario
 
 import br.gohan.dromedario.events.handleEvent
+import io.github.aakira.napier.DebugAntilog
+import io.github.aakira.napier.Napier
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -20,6 +22,8 @@ suspend fun main() {
     val db = DatabaseManager()
     db.setup()
 
+    Napier.base(DebugAntilog())
+
     embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0") {
         install(WebSockets) {
             pingPeriod = 15.seconds
@@ -34,7 +38,7 @@ suspend fun main() {
 fun Application.module(db: DatabaseManager) {
     routing {
         webSocket("/ws") {
-            println("🔌 Novo cliente conectado")
+            Napier.i("🔌 Novo cliente conectado")
             
             // Envia todos os dados existentes para o novo cliente
             launch {
@@ -43,10 +47,10 @@ fun Application.module(db: DatabaseManager) {
                     existingRoutes.forEach { route ->
                         val json = Json.encodeToString(route)
                         send(Frame.Text(json))
-                        println("📤 Dados existentes enviados: ${route.id}")
+                        Napier.i("📤 Dados existentes enviados: ${route.id}")
                     }
                 } catch (e: Exception) {
-                    println("❌ Erro ao enviar dados existentes: ${e.message}")
+                    Napier.e("❌ Erro ao enviar dados existentes: ${e.message}")
                 }
             }
 
@@ -56,9 +60,9 @@ fun Application.module(db: DatabaseManager) {
                     runCatching {
                         val json = Json.encodeToString(routeState)
                         send(Frame.Text(json))
-                        println("📤 Update enviado para cliente: ${routeState.id}")
+                        Napier.i("📤 Update enviado para cliente: ${routeState.id}")
                     }.onFailure {
-                        println("❌ Erro ao enviar update: ${it.message}")
+                        Napier.e("❌ Erro ao enviar update: ${it.message}")
                     }
                 }
             }
@@ -68,7 +72,7 @@ fun Application.module(db: DatabaseManager) {
                 for (frame in incoming) {
                     if (frame is Frame.Text) {
                         val receivedText = frame.readText()
-                        println("📨 Recebido: $receivedText")
+                        Napier.i("📨 Servidor recebeu: $receivedText")
                         
                         try {
                             val message = Json.decodeFromString<WebSocketMessage>(receivedText)
@@ -77,24 +81,25 @@ fun Application.module(db: DatabaseManager) {
                                 AppEvents.ADD_ADDRESS -> {
                                     val state = handleEvent(message)
                                     db.addWaypoint(state)
-                                    println("✅ Waypoint adicionado: ${state.waypoints}")
+                                    Napier.i("✅ Waypoint adicionado: ${state.waypoints}")
                                 }
                                 AppEvents.REMOVE_ADDRESS -> {
                                     val removeData = Json.decodeFromJsonElement<br.gohan.dromedario.events.RemoveWaypointData>(message.data)
                                     db.removeWaypoint(removeData.routeId, removeData.waypointIndex)
-                                    println("✅ Waypoint removido do route ${removeData.routeId}, index ${removeData.waypointIndex}")
+                                    Napier.i("✅ Waypoint removido do route ${removeData.routeId}, index ${removeData.waypointIndex}")
                                 }
                             }
                         } catch (e: Exception) {
-                            println("❌ Erro ao processar mensagem: ${e.message}")
-                            send(Frame.Text("""{"error": "Erro ao processar mensagem: ${e.message}"}"""))
+                            Napier.e("❌ Erro ao processar mensagem: ${e.message}")
+                            // Só para teste - responde qualquer mensagem
+                            send(Frame.Text("""{"type": "echo", "message": "Servidor recebeu: $receivedText"}"""))
                         }
                     }
                 }
             } catch (e: Exception) {
-                println("❌ Erro na conexão: ${e.message}")
+                Napier.e("❌ Erro na conexão: ${e.message}")
             } finally {
-                println("🔌 Cliente desconectado")
+                Napier.i("🔌 Cliente desconectado")
             }
         }
     }

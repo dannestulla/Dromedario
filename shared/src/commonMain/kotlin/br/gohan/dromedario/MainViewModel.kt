@@ -1,12 +1,10 @@
 package br.gohan.dromedario
 
-import android.content.ContentValues.TAG
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.webSocket
-import io.ktor.http.HttpMethod
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import kotlinx.coroutines.delay
@@ -14,17 +12,17 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.time.delay
+import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlin.time.Duration.Companion.seconds
 
 class MainViewModel(
     private val client: HttpClient
 ) : ViewModel() {
-
-    // 1. Ajuste no nome da variável privada e pública
     private val _outgoingFlow = MutableSharedFlow<String>()
     val outgoingFlow: SharedFlow<String?> = _outgoingFlow
 
@@ -36,6 +34,29 @@ class MainViewModel(
             _outgoingFlow.emit(string)
         }
     }
+    
+    fun addWaypoint(waypoint: Waypoint) {
+        viewModelScope.launch {
+            val message = WebSocketMessage(
+                event = AppEvents.ADD_ADDRESS,
+                data = Json.encodeToJsonElement(waypoint)
+            )
+            val jsonString = Json.encodeToString(message)
+            Napier.d("Client: enviando addWaypoint: $jsonString")
+            _outgoingFlow.emit(jsonString)
+        }
+    }
+    
+    fun sendTestMessage() {
+        viewModelScope.launch {
+            val testWaypoint = Waypoint(
+                address = "Rua Teste, 123",
+                latitude = -30.0346,
+                longitude = -51.2177
+            )
+            addWaypoint(testWaypoint)
+        }
+    }
 
     fun startWebSocket(url: String) {
         viewModelScope.launch {
@@ -43,21 +64,22 @@ class MainViewModel(
                 client.webSocket(urlString = url) {
                     launch {
                         outgoingFlow
-                            .filterNotNull()
                             .collect { msg ->
-                                send(Frame.Text(msg))
+                                Napier.d("Client: enviando mensagem para servidor: $msg")
+                                msg?.let { send(Frame.Text(it)) }
                             }
                     }
 
                     for (frame in incoming) {
                         if (frame is Frame.Text) {
                             val text = frame.readText()
+                            Napier.d("Client: recebendo mensagem do servidor: $text")
                             _incomingFlow.value = _incomingFlow.value + text
                         }
                     }
                 }
             } catch (err : Exception) {
-                Log.e(TAG, "startWebSocket $err")
+                Napier.e("Client: Erro WebSocket: ${err.message}")
                 delay(3.seconds)
                 startWebSocket(url)
             }

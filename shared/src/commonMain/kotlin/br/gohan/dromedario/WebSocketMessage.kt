@@ -9,6 +9,7 @@ data class WebSocketMessage(
     val data: JsonElement
 )
 
+@Serializable
 enum class AppEvents {
     ADD_ADDRESS,
     REMOVE_ADDRESS

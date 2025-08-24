@@ -11,10 +11,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.encodeToJsonElement
 
 @Composable
-fun App(client: HttpClient) {
+fun MobileApp(client: HttpClient) {
     val viewModel = remember { MainViewModel(client) }
     val incomingMessages by viewModel.incomingFlow.collectAsStateWithLifecycle()
 
@@ -31,7 +35,19 @@ fun App(client: HttpClient) {
             verticalArrangement = Arrangement.Center
         ) {
             Text(incomingMessages.toString())
-            Button(onClick = {viewModel.sendMessage("test")} ) {
+            Button(onClick = {
+                viewModel.sendMessage(
+                    Json.encodeToString(WebSocketMessage(
+                        event = AppEvents.ADD_ADDRESS,
+                        data =  Json.encodeToJsonElement(
+                            Waypoint(
+                                address = "Avenida 1",
+                                latitude = 1.2,
+                                longitude = 1.1
+                        ))
+                    ))
+                )
+            } ) {
                 Text("send message")
             }
         }
