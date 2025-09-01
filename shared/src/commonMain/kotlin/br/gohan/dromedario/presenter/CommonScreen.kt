@@ -14,16 +14,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.aakira.napier.Napier
-import io.ktor.client.HttpClient
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun CommonScreen(url: String, client: HttpClient) {
-    val viewModel = remember { ClientViewModel(client) }
+fun CommonScreen(
+    url: String,
+    viewModel : ClientSharedViewModel = koinViewModel()
+) {
     val incomingMessages by viewModel.incomingFlow.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {

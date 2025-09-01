@@ -22,7 +22,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlin.time.Duration.Companion.seconds
 
-class ClientViewModel(
+class ClientSharedViewModel(
     private val client: HttpClient
 ) : ViewModel() {
     private val _outgoingFlow = MutableSharedFlow<MessageModel>()

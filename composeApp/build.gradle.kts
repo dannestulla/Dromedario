@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     kotlin("plugin.serialization") version "2.2.10"
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
 }
 
 kotlin {
@@ -46,6 +47,9 @@ kotlin {
             implementation(libs.ktor.client.android)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.ktor.client.cio)
+            implementation(libs.maps.compose)
+            implementation(libs.maps.compose.utils)
+            implementation(libs.maps.compose.widgets)
 
         }
         commonMain.dependencies {
@@ -61,11 +65,13 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.websockets)
             implementation(libs.ktor.client.content.negotiation)
-
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.napier)
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
         }
-        commonTest.dependencies {
+             commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
     }
@@ -74,6 +80,10 @@ kotlin {
 android {
     namespace = "br.gohan.dromedario"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
+
+    buildFeatures {
+        buildConfig = true
+    }
 
     buildTypes {
         debug {
@@ -104,6 +114,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    secrets {
+        propertiesFileName = "secrets.properties"
     }
 }
 
