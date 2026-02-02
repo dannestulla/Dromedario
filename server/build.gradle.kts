@@ -8,10 +8,19 @@ plugins {
 group = "br.gohan.dromedario"
 version = "1.0.0"
 application {
-    mainClass.set("br.gohan.dromedario.ApplicationKt")
-    
+    mainClass.set("br.gohan.dromedario.ServerAppKt")
+
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
+}
+
+// Handle duplicate files in distribution tasks
+tasks.withType<Tar> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType<Zip> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 dependencies {
@@ -21,10 +30,20 @@ dependencies {
     implementation(libs.ktor.server.netty)
     implementation(libs.ktor.server.websockets)
     implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.server.cors)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.kmongo.coroutine)
     implementation(libs.napier)
 
-// se precisar de client no server
+    // JWT Authentication
+    implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.auth.jwt)
+    implementation(libs.java.jwt)
+
+    // HTTP Client for Routes API
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
+
     testImplementation(libs.kotlin.testJunit)
 }

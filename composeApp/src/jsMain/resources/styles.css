@@ -1,0 +1,74 @@
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+body {
+    display: flex;
+}
+
+#compose-container {
+    width: 400px;
+    height: 100vh;
+    overflow-y: auto;
+    border-right: 1px solid #ddd;
+    background-color: #fff;
+}
+
+#map-container {
+    flex: 1;
+    height: 100vh;
+}
+
+/* Button hover effects */
+button:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+/* Input focus styles */
+input:focus {
+    outline: none;
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Card styles */
+.waypoint-card {
+    transition: box-shadow 0.2s ease;
+}
+
+.waypoint-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Google Places Autocomplete (New API) */
+gmp-place-autocomplete {
+    width: 100%;
+}
+
+/* Legacy Places Autocomplete dropdown (fallback) */
+.pac-container {
+    z-index: 10000 !important;
+}
+
+/* Scrollbar styling */
+#compose-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#compose-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+#compose-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#compose-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

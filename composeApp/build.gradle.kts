@@ -1,5 +1,4 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
@@ -20,9 +19,7 @@ kotlin {
         }
     }
 
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        outputModuleName.set("composeApp")
+    js(IR) {
         browser {
             val rootDirPath = project.rootDir.path
             val projectDirPath = project.projectDir.path
@@ -39,28 +36,10 @@ kotlin {
         }
         binaries.executable()
     }
-    
-    sourceSets {
-        androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.ktor.client.android)
-            implementation(libs.ktor.client.okhttp)
-            implementation(libs.ktor.client.cio)
-            implementation(libs.maps.compose)
-            implementation(libs.maps.compose.utils)
-            implementation(libs.maps.compose.widgets)
 
-        }
+    sourceSets {
         commonMain.dependencies {
             implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodel)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(projects.shared)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.websockets)
@@ -68,10 +47,37 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.napier)
             implementation(libs.koin.core)
+            implementation(libs.androidx.lifecycle.viewmodel)
+        }
+        androidMain.dependencies {
+            implementation(compose.preview)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
+            implementation(compose.components.resources)
+            implementation(compose.components.uiToolingPreview)
+            implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.lifecycle.viewmodel)
+            implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.ktor.client.android)
+            implementation(libs.ktor.client.okhttp)
+            implementation(libs.ktor.client.cio)
+            implementation(libs.maps.compose)
+            implementation(libs.maps.compose.utils)
+            implementation(libs.maps.compose.widgets)
+            implementation(libs.play.services.location)
+            implementation(libs.koin.android)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
         }
-             commonTest.dependencies {
+        jsMain.dependencies {
+            implementation(compose.html.core)
+            implementation(libs.ktor.client.js)
+            implementation(libs.koin.compose)
+            implementation(npm("@googlemaps/js-api-loader", "1.16.8"))
+        }
+
+        commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
     }
@@ -124,4 +130,5 @@ android {
 dependencies {
     debugImplementation(compose.uiTooling)
 }
+
 

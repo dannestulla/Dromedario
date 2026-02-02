@@ -31,16 +31,16 @@ class ClientSharedViewModel(
     private val _incomingFlow = MutableStateFlow(RouteStateModel())
     val incomingFlow: StateFlow<RouteStateModel> = _incomingFlow
 
-    fun sendMessage(address: String, index: Int) {
+    fun sendMessage(address: String, index: Int, latitude: Double = 0.0, longitude: Double = 0.0) {
         viewModelScope.launch {
             val message = MessageModel(
                 event = EventType.ADD_WAYPOINT,
-                data = Json.Default.encodeToJsonElement(
+                data = Json.encodeToJsonElement(
                     Waypoint(
                         index = index,
                         address = address,
-                        latitude = 1.2,
-                        longitude = 1.1
+                        latitude = latitude,
+                        longitude = longitude
                     )
                 )
             )
@@ -52,12 +52,19 @@ class ClientSharedViewModel(
         viewModelScope.launch {
             val message = MessageModel(
                 event = EventType.REMOVE_WAYPOINT,
-                data = Json.Default.encodeToJsonElement(
+                data = Json.encodeToJsonElement(
                     RemoveWaypointData(
                         waypointIndex = index
                     )
                 )
             )
+            _outgoingFlow.emit(message)
+        }
+    }
+
+    fun sendEvent(message: MessageModel) {
+        viewModelScope.launch {
+            Napier.d("ClientSharedViewModel: Sending event ${message.event}")
             _outgoingFlow.emit(message)
         }
     }
@@ -71,7 +78,7 @@ class ClientSharedViewModel(
                         outgoingFlow
                             .collect { msg ->
                                 Napier.d("Client: enviando mensagem para servidor: $msg")
-                                val message = Json.Default.encodeToString(msg)
+                                val message = Json.encodeToString(msg)
                                 send(Frame.Text(message))
                             }
                     }
@@ -81,7 +88,7 @@ class ClientSharedViewModel(
                         if (frame is Frame.Text) {
                             val text = frame.readText()
                             Napier.d("Client: recebendo mensagem do servidor: $text")
-                            val incomingObject = Json.Default.decodeFromString<RouteStateModel>(text)
+                            val incomingObject = Json.decodeFromString<RouteStateModel>(text)
                             _incomingFlow.value = incomingObject
                         }
                     }

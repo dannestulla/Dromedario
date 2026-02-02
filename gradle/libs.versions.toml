@@ -20,9 +20,12 @@ ktor = "3.2.3"
 ktorServerCore = "3.2.3"
 logback = "1.5.18"
 mapsCompose = "6.7.2"
+playServicesLocation = "21.3.0"
+koinAndroid = "4.1.0"
 napier = "2.7.1"
 secretsGradlePlugin = "2.0.1"
 serialization = "2.2.10"
+java-jwt = "4.4.0"
 
 [libraries]
 kmongo-coroutine = { module = "org.litote.kmongo:kmongo-coroutine", version.ref = "kmongoCoroutine" }
@@ -57,8 +60,14 @@ ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "kto
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 maps-compose-utils = { module = "com.google.maps.android:maps-compose-utils", version.ref = "mapsCompose" }
 maps-compose-widgets = { module = "com.google.maps.android:maps-compose-widgets", version.ref = "mapsCompose" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koinAndroid" }
 napier = { module = "io.github.aakira:napier", version.ref = "napier" }
 secrets-gradle-plugin = { module = "com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin", version.ref = "secretsGradlePlugin" }
+ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
+ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
+ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor" }
+java-jwt = { module = "com.auth0:java-jwt", version.ref = "java-jwt" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
