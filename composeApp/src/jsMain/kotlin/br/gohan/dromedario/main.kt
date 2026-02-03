@@ -9,6 +9,7 @@ import io.github.aakira.napier.Napier
 import org.jetbrains.compose.web.renderComposable
 import org.koin.core.context.startKoin
 
+// App entry point. Initializes Koin DI, checks auth token, and renders login or map screen.
 fun main() {
     Napier.base(DebugAntilog())
 

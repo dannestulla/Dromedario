@@ -12,15 +12,13 @@ import kotlinx.browser.window
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import org.koin.compose.koinInject
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
+// Main web app screen. Manages map lifecycle, WebSocket connection, and autocomplete wiring.
 @Composable
 fun WebApp(token: String, viewModel: ClientSharedViewModel = koinInject()) {
+    val mapsLoader: GoogleMapsLoader = koinInject()
     val routeState by viewModel.incomingFlow.collectAsState()
 
-    // Initialize MapController after DOM is ready
     var mapController by remember { mutableStateOf<MapController?>(null) }
     var searchInputRef by remember { mutableStateOf<dynamic>(null) }
     var autocompleteAttached by remember { mutableStateOf(false) }
@@ -37,33 +35,36 @@ fun WebApp(token: String, viewModel: ClientSharedViewModel = koinInject()) {
     // Load Google Maps API and initialize map
     LaunchedEffect(Unit) {
         try {
-            mapController = MapController.create("map-container")
+            mapsLoader.ensureLoaded()
+            mapController = MapController("map-container")
         } catch (e: Exception) {
-            Napier.e("Failed to initialize MapController: ${e.message}")
+            Napier.e("Failed to initialize map: ${e.message}")
         }
     }
 
     // Update map when waypoints change
     LaunchedEffect(routeState.waypoints) {
-        mapController?.let { controller ->
-            controller.updateWaypoints(routeState.waypoints)
-        }
+        mapController?.updateWaypoints(routeState.waypoints)
     }
 
-    // Attach Places Autocomplete when both input and map controller are ready
-    LaunchedEffect(mapController, searchInputRef) {
+    // Attach Places Autocomplete when search input is ready
+    LaunchedEffect(searchInputRef) {
         if (autocompleteAttached) return@LaunchedEffect
-        val controller = mapController ?: return@LaunchedEffect
         val input = searchInputRef ?: return@LaunchedEffect
 
-        controller.attachAutocomplete(input) { address, lat, lng ->
-            val nextIndex = (latestWaypoints.value.maxOfOrNull { it.index } ?: -1) + 1
-            viewModel.sendMessage(address, nextIndex, lat, lng)
+        try {
+            mapsLoader.ensureLoaded()
+            attachPlacesAutocomplete(input) { address, lat, lng ->
+                val nextIndex = (latestWaypoints.value.maxOfOrNull { it.index } ?: -1) + 1
+                viewModel.sendMessage(address, nextIndex, lat, lng)
+            }
+            autocompleteAttached = true
+        } catch (e: Exception) {
+            Napier.e("Failed to attach autocomplete: ${e.message}")
         }
-        autocompleteAttached = true
     }
 
-    // Main UI container
+    // UI
     Div({
         style {
             padding(16.px)
@@ -87,17 +88,12 @@ fun WebApp(token: String, viewModel: ClientSharedViewModel = koinInject()) {
             viewModel.deleteMessage(index)
         })
 
-        // Address search with Google Places Autocomplete
         Div({
-            style {
-                marginBottom(16.px)
-            }
+            style { marginBottom(16.px) }
         }) {
             H3 { Text("Add Waypoint") }
             Div({
-                style {
-                    width(100.percent)
-                }
+                style { width(100.percent) }
                 ref { element ->
                     searchInputRef = element
                     onDispose { searchInputRef = null }
@@ -110,4 +106,3 @@ fun WebApp(token: String, viewModel: ClientSharedViewModel = koinInject()) {
         NavigationStatus()
     }
 }
-

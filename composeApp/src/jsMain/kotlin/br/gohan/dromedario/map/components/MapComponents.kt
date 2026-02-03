@@ -42,6 +42,8 @@ import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 
+// Reusable UI components: waypoint list, action buttons, location button, navigation status.
+
 @Composable
 fun TripStatus(waypointCount: Int) {
     Div({

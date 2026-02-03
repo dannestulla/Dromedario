@@ -1,5 +1,6 @@
 package br.gohan.dromedario.di
 
+import br.gohan.dromedario.BuildConfig
 import br.gohan.dromedario.data.MobileRepository
 import br.gohan.dromedario.geofence.GeofenceManagerHelper
 import br.gohan.dromedario.geofence.NotificationHelper
@@ -29,7 +30,7 @@ val mobileModule = module {
 
     // Android-specific dependencies
     single {
-        MobileRepository(get(), ApiKeyProvider.mapsApiKey)
+        MobileRepository(get(), BuildConfig.GOOGLE_ROUTES_API_KEY)
     }
 
     // Permission helper

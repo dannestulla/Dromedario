@@ -1,15 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch",
-      "Bash(./gradlew:*)",
-      "mcp__ide__getDiagnostics",
-      "Bash(dir \"C:\\\\Users\\\\dannn\\\\IdeaProjects\\\\Dromedario\\\\shared\\\\src\" /s /b /ad)",
-      "Bash(del \"C:\\\\Users\\\\dannn\\\\IdeaProjects\\\\Dromedario\\\\shared\\\\src\\\\commonMain\\\\kotlin\\\\br\\\\gohan\\\\dromedario\\\\Platform.kt\")",
-      "Bash(find:*)",
-      "WebFetch(domain:www.npmjs.com)",
-      "WebFetch(domain:github.com)",
-      "WebFetch(domain:developers.google.com)"
+      "Bash(find:*)"
     ]
   }
 }

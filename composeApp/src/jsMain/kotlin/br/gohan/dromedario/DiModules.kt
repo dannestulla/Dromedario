@@ -1,5 +1,6 @@
 package br.gohan.dromedario
 
+import br.gohan.dromedario.map.GoogleMapsLoader
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.js.Js
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -8,7 +9,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
 
-// Kotlin/JS-specific module
+// Koin DI module for the web client. Registers HttpClient and GoogleMapsLoader as singletons.
 val webModule = module {
     single<HttpClient> {
         HttpClient(Js) {
@@ -18,4 +19,5 @@ val webModule = module {
             }
         }
     }
+    single { GoogleMapsLoader() }
 }

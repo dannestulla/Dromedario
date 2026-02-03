@@ -1,19 +1,58 @@
-This is a Kotlin Multiplatform project targeting Android, iOS, Server.
+# Dromedario - Work in Progress
 
-* `/composeApp` is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - `commonMain` is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    `iosMain` would be the right folder for such calls.
+A route planning app built with Kotlin Multiplatform. Android and web clients connect to a shared Ktor server via WebSockets for real-time route synchronization using Google Maps.
 
-* `/iosApp` contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform, 
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+Goal is to be able to plan routes bigger than the google maps route stops limit
+## Architecture
 
-* `/server` is for the Ktor server application.
+```
+composeApp/     Compose Multiplatform client (Android + Kotlin/JS web)
+  commonMain/   Shared client code
+  androidMain/  Android app (Compose + Google Maps SDK)
+  jsMain/       Web app (Compose HTML + Google Maps JS API)
+server/         Ktor server (WebSockets, JWT auth, Routes API, MongoDB)
+shared/         Code shared across all targets (data models, ViewModels)
+docs/           Planning and design documents
+```
 
-* `/shared` is for the code that will be shared between all targets in the project.
-  The most important subfolder is `commonMain`. If preferred, you can add code to the platform-specific folders here too.
+## Tech Stack
 
+- **Kotlin Multiplatform** with Compose Multiplatform
+- **Ktor** — server + HTTP clients
+- **WebSockets** — real-time sync between clients and server
+- **Google Maps** — Android SDK + JavaScript API
+- **Koin** — dependency injection
+- **MongoDB** (KMongo) — persistence
+- **JWT** — authentication
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+## Prerequisites
+
+- JDK 11+
+- Android SDK (for Android target)
+- Google Maps API key
+
+## Setup
+
+1. Create `secrets.properties` in the project root:
+   ```properties
+   MAPS_API_KEY=your_google_maps_api_key
+   APP_PASSWORD = any_password
+   GOOGLE_ROUTES_API_KEY = your_google_routes_api
+   JWT_SECRET = any_jwt_secret
+   ```
+
+2. Build and run:
+   ```bash
+   # Android
+   ./gradlew composeApp:installDebug
+
+   # Web (dev server)
+   ./gradlew composeApp:jsBrowserDevelopmentRun
+
+   # Server
+   ./gradlew server:run
+   ```
+
+## License
+
+TBD

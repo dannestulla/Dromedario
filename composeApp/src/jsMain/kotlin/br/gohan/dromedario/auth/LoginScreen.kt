@@ -24,6 +24,7 @@ data class LoginResponse(val token: String)
 
 private val json = Json { ignoreUnknownKeys = true }
 
+// Password login screen. Posts to /api/login and returns a JWT token on success.
 @Composable
 fun LoginScreen(onLoginSuccess: (String) -> Unit) {
     var password by remember { mutableStateOf("") }
