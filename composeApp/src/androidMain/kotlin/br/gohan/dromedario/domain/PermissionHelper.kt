@@ -1,4 +1,4 @@
-package br.gohan.dromedario.permissions
+package br.gohan.dromedario.domain
 
 import android.Manifest
 import android.content.Context

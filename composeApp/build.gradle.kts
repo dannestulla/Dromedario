@@ -1,3 +1,5 @@
+import java.util.Properties
+
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
@@ -49,16 +51,18 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.androidx.lifecycle.viewmodel)
         }
+
         androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(compose.foundation)
             implementation(compose.material3)
+            implementation(compose.foundation)
             implementation(compose.ui)
             implementation(compose.components.resources)
+            implementation(compose.preview)
             implementation(compose.components.uiToolingPreview)
+            implementation(libs.koin.compose)
+            implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.lifecycle.viewmodel)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.ktor.client.android)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.ktor.client.cio)
@@ -67,9 +71,9 @@ kotlin {
             implementation(libs.maps.compose.widgets)
             implementation(libs.play.services.location)
             implementation(libs.koin.android)
-            implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
         }
+
         jsMain.dependencies {
             implementation(compose.html.core)
             implementation(libs.ktor.client.js)
@@ -125,6 +129,34 @@ android {
     secrets {
         propertiesFileName = "secrets.properties"
     }
+}
+
+// Generate JsSecrets.kt from secrets.properties for the JS target
+val generateJsSecrets by tasks.registering {
+    val secretsFile = rootProject.file("secrets.properties")
+    val outputDir = layout.buildDirectory.dir("generated/jsSecrets/br/gohan/dromedario")
+    inputs.file(secretsFile).optional()
+    outputs.dir(outputDir)
+    doLast {
+        val props = Properties()
+        if (secretsFile.exists()) {
+            secretsFile.inputStream().use { props.load(it) }
+        }
+        val mapsKey = props.getProperty("MAPS_API_KEY", "")
+        val dir = outputDir.get().asFile
+        dir.mkdirs()
+        dir.resolve("JsSecrets.kt").writeText(
+            """
+            |package br.gohan.dromedario
+            |
+            |const val MAPS_API_KEY = "$mapsKey"
+            """.trimMargin()
+        )
+    }
+}
+
+kotlin.sourceSets.named("jsMain") {
+    kotlin.srcDir(generateJsSecrets.map { layout.buildDirectory.dir("generated/jsSecrets") })
 }
 
 dependencies {

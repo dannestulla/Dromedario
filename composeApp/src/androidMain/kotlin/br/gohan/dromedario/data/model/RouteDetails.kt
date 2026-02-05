@@ -18,13 +18,3 @@ data class LegDetails(
     val localizedDistance: String? = null,
     val localizedDuration: String? = null
 )
-
-data class StepDetails(
-    val distanceMeters: Int,
-    val duration: String,
-    val instructions: String,
-    val maneuver: String,
-    val startLocation: LatLng,
-    val endLocation: LatLng,
-    val polyline: String
-)

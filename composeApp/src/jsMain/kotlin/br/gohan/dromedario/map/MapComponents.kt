@@ -1,9 +1,12 @@
-package br.gohan.dromedario.map.components
+package br.gohan.dromedario.map
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import br.gohan.dromedario.data.Waypoint
-import br.gohan.dromedario.map.MapController
 import io.github.aakira.napier.Napier
 import kotlinx.browser.window
 import kotlinx.coroutines.launch
@@ -59,7 +62,14 @@ fun TripStatus(waypointCount: Int) {
 }
 
 @Composable
-fun WaypointList(waypoints: List<Waypoint>, onRemove: (Int) -> Unit) {
+fun WaypointList(
+    waypoints: List<Waypoint>,
+    onRemove: (Int) -> Unit,
+    onReorder: (fromIndex: Int, toIndex: Int) -> Unit = { _, _ -> }
+) {
+    var draggedIndex by remember { mutableStateOf<Int?>(null) }
+    var dragOverIndex by remember { mutableStateOf<Int?>(null) }
+
     Div({
         style {
             marginBottom(16.px)
@@ -74,25 +84,71 @@ fun WaypointList(waypoints: List<Waypoint>, onRemove: (Int) -> Unit) {
                 Text("No waypoints added yet. Search for an address below to add one.")
             }
         } else {
-            waypoints.forEach { waypoint ->
-                WaypointItem(waypoint, onRemove)
+            waypoints.forEachIndexed { listPosition, waypoint ->
+                WaypointItem(
+                    waypoint = waypoint,
+                    onRemove = onRemove,
+                    isDragOver = dragOverIndex == listPosition,
+                    onDragStart = { draggedIndex = listPosition },
+                    onDragOver = { dragOverIndex = listPosition },
+                    onDragLeave = { if (dragOverIndex == listPosition) dragOverIndex = null },
+                    onDrop = {
+                        val from = draggedIndex
+                        if (from != null && from != listPosition) {
+                            onReorder(from, listPosition)
+                        }
+                        draggedIndex = null
+                        dragOverIndex = null
+                    },
+                    onDragEnd = {
+                        draggedIndex = null
+                        dragOverIndex = null
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun WaypointItem(waypoint: Waypoint, onRemove: (Int) -> Unit) {
+fun WaypointItem(
+    waypoint: Waypoint,
+    onRemove: (Int) -> Unit,
+    isDragOver: Boolean = false,
+    onDragStart: () -> Unit = {},
+    onDragOver: () -> Unit = {},
+    onDragLeave: () -> Unit = {},
+    onDrop: () -> Unit = {},
+    onDragEnd: () -> Unit = {}
+) {
     Div({
+        attr("draggable", "true")
+        addEventListener("dragstart") { onDragStart() }
+        addEventListener("dragover") { event ->
+            event.preventDefault()
+            onDragOver()
+        }
+        addEventListener("dragleave") { onDragLeave() }
+        addEventListener("drop") { event ->
+            event.preventDefault()
+            onDrop()
+        }
+        addEventListener("dragend") { onDragEnd() }
         style {
             display(DisplayStyle.Flex)
             justifyContent(JustifyContent.SpaceBetween)
             alignItems(AlignItems.Center)
             padding(12.px)
             marginBottom(8.px)
-            backgroundColor(Color("#fff"))
-            border(1.px, LineStyle.Solid, Color("#ddd"))
+            backgroundColor(if (isDragOver) Color("#e3f2fd") else Color("#fff"))
+            border(
+                2.px,
+                LineStyle.Solid,
+                if (isDragOver) Color("#2196F3") else Color("#ddd")
+            )
             borderRadius(4.px)
+            cursor("grab")
+            property("transition", "background-color 0.15s, border-color 0.15s")
         }
     }) {
         Span {
@@ -109,13 +165,14 @@ fun WaypointItem(waypoint: Waypoint, onRemove: (Int) -> Unit) {
                 cursor("pointer")
             }
         }) {
-            Text("Remove")
+            Text("X")
         }
     }
 }
 
 @Composable
-fun ActionButtons(waypoints: List<Waypoint>) {
+fun ActionButtons(waypoints: List<Waypoint>, onFinalize: () -> Unit = {}) {
+    val isEnabled = waypoints.size >= 2
     Div({
         style {
             display(DisplayStyle.Flex)
@@ -125,27 +182,10 @@ fun ActionButtons(waypoints: List<Waypoint>) {
     }) {
         Button({
             onClick {
-                Napier.d("Optimize route requested")
-                // TODO: Send OPTIMIZE_ROUTE event
-            }
-            style {
-                backgroundColor(Color("#17a2b8"))
-                color(Color.white)
-                border(0.px, LineStyle.None, Color.transparent)
-                padding(12.px, 24.px)
-                borderRadius(4.px)
-                cursor("pointer")
-                fontSize(16.px)
-            }
-        }) {
-            Text("Optimize Route")
-        }
-
-        val isEnabled = waypoints.size >= 2
-        Button({
-            onClick {
-                Napier.d("Finalize route requested")
-                // TODO: Send FINALIZE_ROUTE event
+                if (isEnabled) {
+                    Napier.d("Finalize route requested")
+                    onFinalize()
+                }
             }
             style {
                 backgroundColor(if (isEnabled) Color("#007bff") else Color("#ccc"))
@@ -214,7 +254,7 @@ fun NavigationStatus() {
     }
 }
 
-private suspend fun getCurrentPosition(): Pair<Double, Double> =
+internal suspend fun getCurrentPosition(): Pair<Double, Double> =
     suspendCoroutine { cont ->
         val nav = window.navigator.asDynamic()
         if (nav.geolocation != null && nav.geolocation != undefined) {

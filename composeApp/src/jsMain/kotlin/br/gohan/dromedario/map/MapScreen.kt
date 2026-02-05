@@ -1,11 +1,8 @@
 package br.gohan.dromedario.map
 
 import androidx.compose.runtime.*
-import br.gohan.dromedario.map.components.ActionButtons
-import br.gohan.dromedario.map.components.MyLocationButton
-import br.gohan.dromedario.map.components.NavigationStatus
-import br.gohan.dromedario.map.components.TripStatus
-import br.gohan.dromedario.map.components.WaypointList
+import br.gohan.dromedario.data.EventType
+import br.gohan.dromedario.data.MessageModel
 import br.gohan.dromedario.presenter.ClientSharedViewModel
 import io.github.aakira.napier.Napier
 import kotlinx.browser.window
@@ -16,7 +13,7 @@ import org.koin.compose.koinInject
 // Main web app screen. Manages map lifecycle, WebSocket connection, and autocomplete wiring.
 @Composable
 fun WebApp(token: String, viewModel: ClientSharedViewModel = koinInject()) {
-    val mapsLoader: GoogleMapsLoader = koinInject()
+    val mapsLoader: MapsLoader = koinInject()
     val routeState by viewModel.incomingFlow.collectAsState()
 
     var mapController by remember { mutableStateOf<MapController?>(null) }
@@ -36,15 +33,30 @@ fun WebApp(token: String, viewModel: ClientSharedViewModel = koinInject()) {
     LaunchedEffect(Unit) {
         try {
             mapsLoader.ensureLoaded()
-            mapController = MapController("map-container")
+            val controller = MapController("map-container")
+            controller.onWaypointDragged = { index, address, lat, lng ->
+                viewModel.updateWaypoint(index, address, lat, lng)
+            }
+            controller.onMapDoubleClick = { address, lat, lng ->
+                val nextIndex = (latestWaypoints.value.maxOfOrNull { it.index } ?: -1) + 1
+                viewModel.sendMessage(address, nextIndex, lat, lng)
+            }
+            mapController = controller
+
+            try {
+                val (lat, lng) = getCurrentPosition()
+                controller.centerOn(lat, lng, zoom = 13)
+            } catch (e: Exception) {
+                Napier.d("Could not get user location, using default center: ${e.message}")
+            }
         } catch (e: Exception) {
             Napier.e("Failed to initialize map: ${e.message}")
         }
     }
 
-    // Update map when waypoints change
-    LaunchedEffect(routeState.waypoints) {
-        mapController?.updateWaypoints(routeState.waypoints)
+    // Update map when waypoints/polyline change or map becomes available
+    LaunchedEffect(routeState.waypoints, routeState.encodedPolyline, mapController) {
+        mapController?.updateWaypoints(routeState.waypoints, routeState.encodedPolyline)
     }
 
     // Attach Places Autocomplete when search input is ready
@@ -84,9 +96,11 @@ fun WebApp(token: String, viewModel: ClientSharedViewModel = koinInject()) {
         }
 
         TripStatus(routeState.waypoints.size)
-        WaypointList(routeState.waypoints, onRemove = { index ->
-            viewModel.deleteMessage(index)
-        })
+        WaypointList(
+            waypoints = routeState.waypoints,
+            onRemove = { index -> viewModel.deleteMessage(index) },
+            onReorder = { fromIndex, toIndex -> viewModel.reorderWaypoints(fromIndex, toIndex) }
+        )
 
         Div({
             style { marginBottom(16.px) }
@@ -101,7 +115,9 @@ fun WebApp(token: String, viewModel: ClientSharedViewModel = koinInject()) {
             })
         }
 
-        ActionButtons(routeState.waypoints)
+        ActionButtons(routeState.waypoints) {
+            viewModel.sendEvent(MessageModel(event = EventType.FINALIZE_ROUTE))
+        }
         MyLocationButton(mapController)
         NavigationStatus()
     }

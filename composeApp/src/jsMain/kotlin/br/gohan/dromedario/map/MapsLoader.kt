@@ -1,6 +1,5 @@
 package br.gohan.dromedario.map
 
-import br.gohan.dromedario.MAPS_API_KEY
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.await
 import kotlin.js.Promise
@@ -9,7 +8,7 @@ import kotlin.js.Promise
 external object JsApiLoaderModule
 
 // Loads the Google Maps JS API via the @googlemaps/js-api-loader npm package. Idempotent.
-class GoogleMapsLoader {
+class MapsLoader {
     private var loaded = false
 
     suspend fun ensureLoaded() {
@@ -29,8 +28,9 @@ class GoogleMapsLoader {
         (loader.importLibrary("marker") as Promise<dynamic>).await()
         (loader.importLibrary("places") as Promise<dynamic>).await()
         (loader.importLibrary("geometry") as Promise<dynamic>).await()
+        (loader.importLibrary("geocoding") as Promise<dynamic>).await()
 
         loaded = true
-        Napier.d("GoogleMapsLoader: All libraries loaded")
+        Napier.d("MapsLoader: All libraries loaded")
     }
 }

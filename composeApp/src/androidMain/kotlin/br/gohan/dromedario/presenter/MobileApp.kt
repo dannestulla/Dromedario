@@ -1,6 +1,5 @@
 package br.gohan.dromedario.presenter
 
-import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.gohan.dromedario.data.TripSession
 import br.gohan.dromedario.data.TripStatus
-import br.gohan.dromedario.permissions.PermissionHelper
+import br.gohan.dromedario.domain.PermissionHelper
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
@@ -50,21 +48,17 @@ import org.koin.compose.viewmodel.koinViewModel
 fun MobileApp() {
     val url = "ws://10.0.2.2:8080/ws"
     val permissionHelper: PermissionHelper = koinInject()
-    var hasPermissions by remember { mutableStateOf(permissionHelper.hasAllRequiredPermissions()) }
+    var hasPermissions by remember { mutableStateOf(permissionHelper.hasLocationPermissions()) }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        hasPermissions = permissionHelper.hasAllRequiredPermissions()
+        hasPermissions = permissionHelper.hasLocationPermissions()
     }
 
     LaunchedEffect(Unit) {
         if (!hasPermissions) {
-            locationPermissionLauncher.launch(
-                PermissionHelper.LOCATION_PERMISSIONS +
-                PermissionHelper.BACKGROUND_LOCATION_PERMISSION +
-                PermissionHelper.NOTIFICATION_PERMISSION
-            )
+            locationPermissionLauncher.launch(PermissionHelper.LOCATION_PERMISSIONS)
         }
     }
 

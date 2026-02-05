@@ -32,38 +32,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 
 // Track connected WebSocket sessions
-private val sessions = Collections.synchronizedSet(mutableSetOf<WebSocketServerSession>())
-
-// Secrets loaded from secrets.properties
-private lateinit var secrets: Properties
-
-fun loadSecrets(): Properties {
-    val props = Properties()
-    // Try project root first, then current directory
-    val locations = listOf(
-        File("../secrets.properties"),  // When running from server/
-        File("secrets.properties"),      // When running from project root
-        File("../../secrets.properties") // Fallback
-    )
-
-    for (file in locations) {
-        if (file.exists()) {
-            file.inputStream().use { props.load(it) }
-            println("Loaded secrets from: ${file.absolutePath}")
-            break
-        }
-    }
-
-    if (props.isEmpty) {
-        println("Warning: secrets.properties not found, using application.conf defaults")
-    }
-
-    return props
-}
-
-fun getSecret(key: String, default: String = ""): String {
-    return secrets.getProperty(key)?.trim() ?: default
-}
+val sessions = Collections.synchronizedSet(mutableSetOf<WebSocketServerSession>())
 
 suspend fun main() {
     // Load secrets from secrets.properties
@@ -133,15 +102,15 @@ fun Application.module(db: DatabaseManager) {
             }
         }
 
-        // WebSocket endpoint with auth
+        // WebSocket endpoint (auth optional for now)
         webSocket("/ws") {
             val token = call.request.queryParameters["token"]
-            if (!authService.validateToken(token)) {
+            if (token != null && !authService.validateToken(token)) {
                 close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid token"))
                 return@webSocket
             }
 
-            Napier.i("New authenticated client connected")
+            Napier.i("New client connected (authenticated: ${token != null})")
             sessions.add(this)
 
             // Sends initial state to client
@@ -195,6 +164,11 @@ fun Application.module(db: DatabaseManager) {
             }
         }
 
+        // Export web app (wasmJs Canvas-based, for mobile)
+        staticResources("/export", "export") {
+            default("index.html")
+        }
+
         // Static file hosting for web client (must be last)
         staticResources("/", "web") {
             default("index.html")
@@ -202,162 +176,5 @@ fun Application.module(db: DatabaseManager) {
     }
 }
 
-@OptIn(ExperimentalTime::class)
-private suspend fun handleMessage(
-    message: MessageModel,
-    db: DatabaseManager,
-    routeOptimizer: RouteOptimizer?
-) {
-    when (message.event) {
-        EventType.ADD_WAYPOINT -> {
-            val data = message.data
-            if (data == null) {
-                Napier.e("Null data for ADD_WAYPOINT")
-                return
-            }
-            val waypoint = Json.decodeFromJsonElement<Waypoint>(data)
-            db.addWaypoint(waypoint)
-            Napier.i("Waypoint added: ${waypoint.address}")
-        }
 
-        EventType.REMOVE_WAYPOINT -> {
-            val data = message.data
-            if (data == null) {
-                Napier.e("Null data for REMOVE_WAYPOINT")
-                return
-            }
-            val removeData = Json.decodeFromJsonElement<RemoveWaypointData>(data)
-            db.removeWaypoint(removeData.waypointIndex)
-            Napier.i("Waypoint removed at index: ${removeData.waypointIndex}")
-        }
 
-        EventType.OPTIMIZE_ROUTE -> {
-            if (routeOptimizer == null) {
-                Napier.w("Route optimizer not configured - Google Routes API key missing")
-                return
-            }
-            val currentState = db.getCurrentState()
-            if (currentState.waypoints.size < 2) {
-                Napier.w("Not enough waypoints to optimize")
-                return
-            }
-            try {
-                val optimizedWaypoints = routeOptimizer.optimizeWaypoints(currentState.waypoints)
-                db.updateWaypoints(optimizedWaypoints)
-                Napier.i("Route optimized - waypoints reordered")
-            } catch (e: Exception) {
-                Napier.e("Error optimizing route: ${e.message}")
-            }
-        }
-
-        EventType.FINALIZE_ROUTE -> {
-            val currentState = db.getCurrentState()
-            if (currentState.waypoints.isEmpty()) {
-                Napier.w("No waypoints to finalize")
-                return
-            }
-            val groups = generateGroups(currentState.waypoints)
-            val updatedTrip = TripSession(
-                id = currentState.id,
-                waypoints = currentState.waypoints,
-                groups = groups,
-                activeGroupIndex = 0,
-                status = TripStatus.NAVIGATING,
-                createdAt = Clock.System.now().epochSeconds,
-                updatedAt = Clock.System.now().epochSeconds
-            )
-            db.updateTripSession(updatedTrip)
-            broadcastSyncState(updatedTrip)
-            Napier.i("Route finalized - ${groups.size} groups created")
-        }
-
-        EventType.GROUP_COMPLETED -> {
-            val trip = db.getCurrentTripSession()
-            if (trip == null) {
-                Napier.w("No active trip session")
-                return
-            }
-            val updatedGroups = trip.groups.mapIndexed { idx, group ->
-                when {
-                    idx == trip.activeGroupIndex -> group.copy(status = GroupStatus.COMPLETED)
-                    idx == trip.activeGroupIndex + 1 -> group.copy(status = GroupStatus.ACTIVE)
-                    else -> group
-                }
-            }
-            val newActiveIndex = trip.activeGroupIndex + 1
-            val newStatus = if (newActiveIndex >= trip.groups.size) TripStatus.COMPLETED else TripStatus.NAVIGATING
-
-            val updatedTrip = trip.copy(
-                groups = updatedGroups,
-                activeGroupIndex = newActiveIndex,
-                status = newStatus,
-                updatedAt = Clock.System.now().epochSeconds
-            )
-            db.updateTripSession(updatedTrip)
-            broadcastSyncState(updatedTrip)
-            Napier.i("Group ${trip.activeGroupIndex} completed, advancing to group $newActiveIndex")
-        }
-
-        EventType.REORDER_WAYPOINTS -> {
-            val data = message.data
-            if (data == null) {
-                Napier.e("Null data for REORDER_WAYPOINTS")
-                return
-            }
-            val newOrder = Json.decodeFromJsonElement<List<Waypoint>>(data)
-            db.updateWaypoints(newOrder)
-            Napier.i("Waypoints reordered")
-        }
-
-        else -> {
-            Napier.w("Unhandled event type: ${message.event}")
-        }
-    }
-}
-
-/**
- * Generates route groups from waypoints, with max 9 waypoints per group.
- * This is to comply with Google Maps URL limit.
- */
-fun generateGroups(waypoints: List<Waypoint>, maxGroupSize: Int = 9): List<RouteGroup> {
-    if (waypoints.isEmpty()) return emptyList()
-
-    val groups = mutableListOf<RouteGroup>()
-    var startIndex = 0
-    var groupIndex = 0
-
-    while (startIndex < waypoints.size) {
-        val endIndex = minOf(startIndex + maxGroupSize, waypoints.size)
-        groups.add(
-            RouteGroup(
-                index = groupIndex,
-                waypointStartIndex = startIndex,
-                waypointEndIndex = endIndex,
-                status = if (groupIndex == 0) GroupStatus.ACTIVE else GroupStatus.PENDING
-            )
-        )
-        startIndex = endIndex
-        groupIndex++
-    }
-
-    return groups
-}
-
-/**
- * Broadcasts a SYNC_STATE message to all connected clients.
- */
-private suspend fun broadcastSyncState(trip: TripSession) {
-    val syncMessage = MessageModel(
-        event = EventType.SYNC_STATE,
-        data = Json.encodeToJsonElement(trip)
-    )
-    val json = Json.encodeToString(syncMessage)
-
-    sessions.forEach { session ->
-        try {
-            session.send(Frame.Text(json))
-        } catch (e: Exception) {
-            Napier.e("Error broadcasting to session: ${e.message}")
-        }
-    }
-}

@@ -14,8 +14,6 @@ import br.gohan.dromedario.data.TripSession
 import br.gohan.dromedario.data.TripStatus
 import br.gohan.dromedario.data.Waypoint
 import br.gohan.dromedario.domain.geometricCenter
-import br.gohan.dromedario.geofence.GeofenceManagerHelper
-import br.gohan.dromedario.geofence.NotificationHelper
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.ktx.utils.toLatLngList
 import io.github.aakira.napier.Napier
@@ -25,9 +23,7 @@ import kotlinx.coroutines.launch
 
 class MobileViewModel(
     private val mobileRepository: MobileRepository,
-    private val clientSharedViewModel: ClientSharedViewModel,
-    private val geofenceManager: GeofenceManagerHelper,
-    private val notificationHelper: NotificationHelper
+    private val clientSharedViewModel: ClientSharedViewModel
 ) : ViewModel() {
     private val _route = MutableStateFlow<List<LatLng>>(listOf())
     val route = _route.asStateFlow()
@@ -97,38 +93,12 @@ class MobileViewModel(
             return
         }
 
-        if (trip.status != TripStatus.NAVIGATING) {
-            Napier.e("MobileViewModel: Cannot start navigation - trip is not in NAVIGATING status")
-            return
-        }
-
         val activeGroup = trip.groups.getOrNull(trip.activeGroupIndex) ?: run {
             Napier.e("MobileViewModel: Cannot start navigation - no active group")
             return
         }
 
         Napier.d("MobileViewModel: Starting navigation for group ${activeGroup.index}")
-
-        // Register geofence for the last waypoint of the active group
-        val lastWaypointIndex = activeGroup.waypointEndIndex - 1
-        val lastWaypoint = trip.waypoints.getOrNull(lastWaypointIndex) ?: run {
-            Napier.e("MobileViewModel: Cannot find last waypoint at index $lastWaypointIndex")
-            return
-        }
-
-        geofenceManager.removeAllGeofences {
-            geofenceManager.registerGeofenceForWaypoint(
-                waypoint = lastWaypoint,
-                onSuccess = {
-                    Napier.d("MobileViewModel: Geofence registered for waypoint ${lastWaypoint.index}")
-                },
-                onFailure = { error ->
-                    Napier.e("MobileViewModel: Failed to register geofence: ${error.message}")
-                }
-            )
-        }
-
-        // Export the group to Google Maps
         exportGroupToGoogleMaps(context, trip, activeGroup)
 
         viewModelScope.launch {
@@ -136,26 +106,16 @@ class MobileViewModel(
         }
     }
 
-    fun startNextGroup(context: Context) {
+    fun startNextGroup() {
         viewModelScope.launch {
             Napier.d("MobileViewModel: Starting next group")
-
-            // Send GROUP_COMPLETED event to server
             val message = MessageModel(event = EventType.GROUP_COMPLETED)
             clientSharedViewModel.sendEvent(message)
-
-            // The server will update the state and broadcast it back
-            // When the state is received, we can start navigation for the new active group
-            // For now, we'll wait for the state update and then the user can tap "Start Navigation" again
-            notificationHelper.cancelNotification()
         }
     }
 
     fun cancelNavigation() {
         viewModelScope.launch {
-            Napier.d("MobileViewModel: Cancelling navigation")
-            geofenceManager.removeAllGeofences()
-            notificationHelper.cancelAllNotifications()
             _isNavigating.emit(false)
         }
     }

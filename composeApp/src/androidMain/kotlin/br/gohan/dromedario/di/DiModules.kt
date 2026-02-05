@@ -2,9 +2,7 @@ package br.gohan.dromedario.di
 
 import br.gohan.dromedario.BuildConfig
 import br.gohan.dromedario.data.MobileRepository
-import br.gohan.dromedario.geofence.GeofenceManagerHelper
-import br.gohan.dromedario.geofence.NotificationHelper
-import br.gohan.dromedario.permissions.PermissionHelper
+import br.gohan.dromedario.domain.PermissionHelper
 import br.gohan.dromedario.presenter.MobileViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -38,17 +36,7 @@ val mobileModule = module {
         PermissionHelper(androidContext())
     }
 
-    // Geofence manager
-    single {
-        GeofenceManagerHelper(androidContext())
-    }
-
-    // Notification helper
-    single {
-        NotificationHelper(androidContext())
-    }
-
     viewModel {
-        MobileViewModel(get(), get(), get(), get())
+        MobileViewModel(get(), get())
     }
 }

@@ -11,6 +11,7 @@ data class RouteStateModel(
     @SerialName("_id")
     val id: String = "session",
     val waypoints: List<Waypoint> = emptyList(),
+    val encodedPolyline: String? = null,
     val updatedAt: Long = Clock.System.now().epochSeconds
 )
 

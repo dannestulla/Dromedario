@@ -19,18 +19,27 @@ fun attachPlacesAutocomplete(
     containerElement.appendChild(autocompleteElement)
 
     val callback: (dynamic) -> Unit = { event ->
-        val placePrediction: PlacePrediction? = event.placePrediction?.unsafeCast<PlacePrediction>()
-        placePrediction?.let { prediction ->
-            val place = prediction.toPlace()
-            place.fetchFields(fetchFieldsOptions("formattedAddress", "location")).then { resolved ->
-                val location: LatLng? = resolved.location
-                location?.let {
-                    val address = resolved.formattedAddress ?: "Unknown location"
-                    onPlaceSelected(address, it.lat(), it.lng())
-                }
+        try {
+            val placePrediction: PlacePrediction? = event.placePrediction?.unsafeCast<PlacePrediction>()
+            if (placePrediction == null) {
+                Napier.e("PlacesAutocomplete: placePrediction is null on event")
             }
+            val place = placePrediction?.toPlace()
+            place?.fetchFields(fetchFieldsOptions("formattedAddress", "location"))?.then {
+                // fetchFields populates the original place object in-place
+                val location: LatLng? = place.location
+                if (location == null) {
+                    Napier.e("PlacesAutocomplete: location is null after fetchFields")
+                    return@then null
+                }
+                val address = place.formattedAddress ?: "Unknown location"
+                Napier.d("PlacesAutocomplete: Selected '$address'")
+                onPlaceSelected(address, location.lat(), location.lng())
+                null
+            }
+        } catch (e: Throwable) {
+            Napier.e("PlacesAutocomplete: Error in gmp-select handler: ${e.message}")
         }
     }
     autocompleteElement.addEventListener("gmp-select", callback)
-    Napier.d("PlacesAutocomplete: Attached to container")
 }

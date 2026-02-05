@@ -3,10 +3,10 @@ package br.gohan.dromedario.presenter
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.gohan.dromedario.data.EventType
+import br.gohan.dromedario.data.MessageModel
 import br.gohan.dromedario.data.RemoveWaypointData
 import br.gohan.dromedario.data.RouteStateModel
 import br.gohan.dromedario.data.Waypoint
-import br.gohan.dromedario.data.MessageModel
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.webSocket
@@ -62,6 +62,38 @@ class ClientSharedViewModel(
         }
     }
 
+    fun updateWaypoint(index: Int, address: String, latitude: Double, longitude: Double) {
+        viewModelScope.launch {
+            val current = _incomingFlow.value.waypoints.toMutableList()
+            if (index !in current.indices) return@launch
+            current[index] = current[index].copy(
+                address = address,
+                latitude = latitude,
+                longitude = longitude
+            )
+            val message = MessageModel(
+                event = EventType.REORDER_WAYPOINTS,
+                data = Json.encodeToJsonElement(current)
+            )
+            _outgoingFlow.emit(message)
+        }
+    }
+
+    fun reorderWaypoints(fromIndex: Int, toIndex: Int) {
+        viewModelScope.launch {
+            val current = _incomingFlow.value.waypoints.toMutableList()
+            if (fromIndex !in current.indices || toIndex !in current.indices) return@launch
+            val item = current.removeAt(fromIndex)
+            current.add(toIndex, item)
+            val reindexed = current.mapIndexed { i, wp -> wp.copy(index = i) }
+            val message = MessageModel(
+                event = EventType.REORDER_WAYPOINTS,
+                data = Json.encodeToJsonElement(reindexed)
+            )
+            _outgoingFlow.emit(message)
+        }
+    }
+
     fun sendEvent(message: MessageModel) {
         viewModelScope.launch {
             Napier.d("ClientSharedViewModel: Sending event ${message.event}")
@@ -88,8 +120,7 @@ class ClientSharedViewModel(
                         if (frame is Frame.Text) {
                             val text = frame.readText()
                             Napier.d("Client: recebendo mensagem do servidor: $text")
-                            val incomingObject = Json.decodeFromString<RouteStateModel>(text)
-                            _incomingFlow.value = incomingObject
+                            handleIncomingMessage(text)
                         }
                     }
                 }
@@ -98,6 +129,17 @@ class ClientSharedViewModel(
                 delay(3.seconds)
                 startWebSocket(url)
             }
+        }
+    }
+
+    private val jsonParser = Json { ignoreUnknownKeys = true }
+
+    private fun handleIncomingMessage(text: String) {
+        try {
+            val routeState = jsonParser.decodeFromString<RouteStateModel>(text)
+            _incomingFlow.value = routeState
+        } catch (e: Exception) {
+            Napier.e("Client: Failed to parse incoming message: ${e.message}")
         }
     }
 

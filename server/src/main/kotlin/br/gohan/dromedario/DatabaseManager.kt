@@ -127,6 +127,47 @@ class DatabaseManager {
         _databaseEvents.emit(updatedState)
     }
 
+    suspend fun updateWaypointsWithPolyline(waypoints: List<Waypoint>, encodedPolyline: String?) {
+        val reindexedWaypoints = waypoints.mapIndexed { index, waypoint ->
+            waypoint.copy(index = index)
+        }
+        val updatedState = getCurrentState().copy(
+            waypoints = reindexedWaypoints,
+            encodedPolyline = encodedPolyline,
+            updatedAt = System.currentTimeMillis()
+        )
+
+        sessionCollection.updateOne(
+            RouteStateModel::id eq SESSION_ID,
+            Updates.combine(
+                Updates.set(RouteStateModel::waypoints.name, reindexedWaypoints),
+                Updates.set(RouteStateModel::encodedPolyline.name, encodedPolyline),
+                Updates.set(RouteStateModel::updatedAt.name, updatedState.updatedAt)
+            )
+        )
+
+        println("Waypoints updated with polyline. Total: ${reindexedWaypoints.size}")
+        _databaseEvents.emit(updatedState)
+    }
+
+    suspend fun updateEncodedPolyline(encodedPolyline: String?) {
+        val updatedState = getCurrentState().copy(
+            encodedPolyline = encodedPolyline,
+            updatedAt = System.currentTimeMillis()
+        )
+
+        sessionCollection.updateOne(
+            RouteStateModel::id eq SESSION_ID,
+            Updates.combine(
+                Updates.set(RouteStateModel::encodedPolyline.name, encodedPolyline),
+                Updates.set(RouteStateModel::updatedAt.name, updatedState.updatedAt)
+            )
+        )
+
+        println("Encoded polyline updated")
+        _databaseEvents.emit(updatedState)
+    }
+
     suspend fun clearAllWaypoints() {
         val clearedState = RouteStateModel(
             id = SESSION_ID,
@@ -177,8 +218,4 @@ class DatabaseManager {
         }
     }
 
-    suspend fun resetTripSession() {
-        tripSessionCollection.deleteOne(TripSession::id eq SESSION_ID)
-        println("Trip session reset")
-    }
 }
