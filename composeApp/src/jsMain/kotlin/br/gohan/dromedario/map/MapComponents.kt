@@ -171,8 +171,10 @@ fun WaypointItem(
 }
 
 @Composable
-fun ActionButtons(waypoints: List<Waypoint>, onFinalize: () -> Unit = {}) {
-    val isEnabled = waypoints.size >= 2
+fun ActionButtons(waypoints: List<Waypoint>, onClearAll: () -> Unit = {}) {
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    val isEnabled = waypoints.isNotEmpty()
+
     Div({
         style {
             display(DisplayStyle.Flex)
@@ -183,12 +185,11 @@ fun ActionButtons(waypoints: List<Waypoint>, onFinalize: () -> Unit = {}) {
         Button({
             onClick {
                 if (isEnabled) {
-                    Napier.d("Finalize route requested")
-                    onFinalize()
+                    showConfirmDialog = true
                 }
             }
             style {
-                backgroundColor(if (isEnabled) Color("#007bff") else Color("#ccc"))
+                backgroundColor(if (isEnabled) Color("#dc3545") else Color("#ccc"))
                 color(Color.white)
                 border(0.px, LineStyle.None, Color.transparent)
                 padding(12.px, 24.px)
@@ -197,7 +198,104 @@ fun ActionButtons(waypoints: List<Waypoint>, onFinalize: () -> Unit = {}) {
                 fontSize(16.px)
             }
         }) {
-            Text("Finalize Route")
+            Text("Clear All")
+        }
+    }
+
+    if (showConfirmDialog) {
+        ConfirmDialog(
+            message = "Are you sure you want to clear all ${waypoints.size} waypoints?",
+            onConfirm = {
+                showConfirmDialog = false
+                onClearAll()
+            },
+            onCancel = {
+                showConfirmDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun ConfirmDialog(
+    message: String,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit
+) {
+    // Overlay
+    Div({
+        style {
+            property("position", "fixed")
+            property("top", "0")
+            property("left", "0")
+            property("right", "0")
+            property("bottom", "0")
+            backgroundColor(Color("rgba(0, 0, 0, 0.5)"))
+            display(DisplayStyle.Flex)
+            justifyContent(JustifyContent.Center)
+            alignItems(AlignItems.Center)
+            property("z-index", "1000")
+        }
+        onClick { onCancel() }
+    }) {
+        // Dialog box
+        Div({
+            style {
+                backgroundColor(Color.white)
+                padding(24.px)
+                borderRadius(8.px)
+                property("max-width", "400px")
+                property("box-shadow", "0 4px 20px rgba(0, 0, 0, 0.3)")
+            }
+            onClick { it.stopPropagation() }
+        }) {
+            P({
+                style {
+                    margin(0.px)
+                    marginBottom(20.px)
+                    fontSize(16.px)
+                    color(Color("#333"))
+                }
+            }) {
+                Text(message)
+            }
+
+            Div({
+                style {
+                    display(DisplayStyle.Flex)
+                    justifyContent(JustifyContent.FlexEnd)
+                    gap(12.px)
+                }
+            }) {
+                Button({
+                    onClick { onCancel() }
+                    style {
+                        backgroundColor(Color("#6c757d"))
+                        color(Color.white)
+                        border(0.px, LineStyle.None, Color.transparent)
+                        padding(10.px, 20.px)
+                        borderRadius(4.px)
+                        cursor("pointer")
+                        fontSize(14.px)
+                    }
+                }) {
+                    Text("Cancel")
+                }
+                Button({
+                    onClick { onConfirm() }
+                    style {
+                        backgroundColor(Color("#dc3545"))
+                        color(Color.white)
+                        border(0.px, LineStyle.None, Color.transparent)
+                        padding(10.px, 20.px)
+                        borderRadius(4.px)
+                        cursor("pointer")
+                        fontSize(14.px)
+                    }
+                }) {
+                    Text("Clear All")
+                }
+            }
         }
     }
 }
@@ -230,27 +328,6 @@ fun MyLocationButton(mapController: MapController?) {
         }
     }) {
         Text("Center on My Location")
-    }
-}
-
-@Composable
-fun NavigationStatus() {
-    Div({
-        style {
-            marginTop(24.px)
-            padding(16.px)
-            backgroundColor(Color("#e7f3ff"))
-            borderRadius(8.px)
-        }
-    }) {
-        P({
-            style {
-                margin(0.px)
-                color(Color("#666"))
-            }
-        }) {
-            Text("Web client is for route planning. Use the mobile app for navigation with geofencing.")
-        }
     }
 }
 

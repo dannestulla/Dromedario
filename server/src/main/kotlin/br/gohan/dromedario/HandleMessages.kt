@@ -166,6 +166,12 @@ suspend fun handleMessage(
             }
         }
 
+        EventType.CLEAR_ALL -> {
+            db.clearAllWaypoints()
+            db.updateEncodedPolyline(null)
+            Napier.i("All waypoints cleared")
+        }
+
         else -> {
             Napier.w("Unhandled event type: ${message.event}")
         }

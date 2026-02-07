@@ -9,4 +9,7 @@ data class LoginRequest(val password: String)
 data class LoginResponse(val token: String)
 
 @Serializable
+data class GoogleLoginRequest(val credential: String)
+
+@Serializable
 data class ErrorResponse(val error: String)

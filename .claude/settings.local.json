@@ -1,7 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(dir /B)",
+      "Bash(git mv:*)",
+      "WebSearch",
+      "Bash(.gradlew.bat:*)",
+      "Bash(ls:*)",
+      "Bash(./gradlew :composeApp:compileKotlinWasmJs:*)",
+      "Bash(./gradlew:*)",
+      "Bash(ipconfig:*)",
+      "Bash(curl:*)",
+      "Bash(netsh advfirewall firewall show rule name=\"Dromedario Server\")",
+      "Bash(dir \"C:\\\\Users\\\\dannn\\\\IdeaProjects\\\\Dromedario\\\\server\\\\src\\\\main\\\\resources\\\\export\"\")",
+      "Bash(cmd /c \"gradlew.bat :composeApp:jsMainClasses\")",
+      "Bash(cmd /c \"gradlew.bat :composeApp:jsMainClasses 2>&1\")",
+      "Bash(git stash:*)",
+      "Bash(cmd /c \"gradlew.bat :composeApp:jsBrowserDevelopmentWebpack 2>&1\")",
+      "Bash(cmd.exe:*)",
+      "Bash(dir:*)"
     ]
   }
 }

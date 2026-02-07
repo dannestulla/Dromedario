@@ -74,11 +74,14 @@ kotlin {
             implementation(libs.koin.compose.viewmodel)
         }
 
-        jsMain.dependencies {
-            implementation(compose.html.core)
-            implementation(libs.ktor.client.js)
-            implementation(libs.koin.compose)
-            implementation(npm("@googlemaps/js-api-loader", "1.16.8"))
+        jsMain {
+            kotlin.srcDir(layout.buildDirectory.dir("generated/jsSecrets"))
+            dependencies {
+                implementation(compose.html.core)
+                implementation(libs.ktor.client.js)
+                implementation(libs.koin.compose)
+                implementation(npm("@googlemaps/js-api-loader", "1.16.8"))
+            }
         }
 
         commonTest.dependencies {
@@ -143,6 +146,7 @@ val generateJsSecrets by tasks.registering {
             secretsFile.inputStream().use { props.load(it) }
         }
         val mapsKey = props.getProperty("MAPS_API_KEY", "")
+        val googleClientId = props.getProperty("GOOGLE_CLIENT_ID", "")?.trim() ?: ""
         val dir = outputDir.get().asFile
         dir.mkdirs()
         dir.resolve("JsSecrets.kt").writeText(
@@ -150,13 +154,14 @@ val generateJsSecrets by tasks.registering {
             |package br.gohan.dromedario
             |
             |const val MAPS_API_KEY = "$mapsKey"
+            |const val GOOGLE_CLIENT_ID = "$googleClientId"
             """.trimMargin()
         )
     }
 }
 
-kotlin.sourceSets.named("jsMain") {
-    kotlin.srcDir(generateJsSecrets.map { layout.buildDirectory.dir("generated/jsSecrets") })
+tasks.named("compileKotlinJs") {
+    dependsOn(generateJsSecrets)
 }
 
 dependencies {

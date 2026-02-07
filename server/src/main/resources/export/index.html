@@ -4,187 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dromedario - Export Routes</title>
+    <link type="text/css" rel="stylesheet" href="/export/styles.css">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-            padding: 16px;
-            min-height: 100vh;
-        }
-        h1 { font-size: 24px; margin-bottom: 4px; }
-        .subtitle { font-size: 18px; color: #666; margin-bottom: 16px; }
-        .total { font-size: 15px; color: #555; margin-bottom: 20px; }
-        .waiting {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 60vh;
-            text-align: center;
-            color: #888;
-        }
-        .waiting p { margin: 8px 0; font-size: 16px; }
-        .spinner {
-            width: 40px; height: 40px;
-            border: 4px solid #ddd;
-            border-top: 4px solid #007bff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 16px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-            transition: transform 0.1s;
-        }
-        .card:active { transform: scale(0.98); }
-        .card-body { flex: 1; }
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 6px;
-        }
-        .card-title { font-size: 18px; font-weight: 700; }
-        .card-count { font-size: 14px; font-weight: 600; }
-        .card-count.full { color: #2e7d32; }
-        .card-count.partial { color: #ed6c02; }
-        .progress-bar {
-            height: 6px;
-            background: #e0e0e0;
-            border-radius: 3px;
-            margin-bottom: 10px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 0.3s;
-        }
-        .progress-fill.full { background: #2e7d32; }
-        .progress-fill.partial { background: #ed6c02; }
-        .card-address { font-size: 13px; color: #555; line-height: 1.4; }
-        .card-arrow { font-size: 24px; color: #007bff; padding-left: 12px; }
+        /* Override main layout for export page - no sidebar/map split */
+        body { display: block; }
+        #compose-container { width: 100%; height: auto; border: none; }
+        #map-container { display: none; }
     </style>
 </head>
 <body>
-    <h1>Dromedario</h1>
-    <div class="subtitle">Export to Google Maps</div>
-    <div id="content">
-        <div class="waiting">
-            <div class="spinner"></div>
-            <p>Connecting to web app...</p>
-            <p style="font-size:14px">Add waypoints on the web dashboard to see route groups here</p>
-        </div>
-    </div>
-    <script>
-        (function() {
-            var MAX_GROUP_SIZE = 9;
-            var content = document.getElementById("content");
-            var ws;
-            var reconnectDelay = 3000;
+    <div id="compose-container"></div>
+    <div id="map-container"></div>
 
-            function connect() {
-                var proto = location.protocol === "https:" ? "wss" : "ws";
-                ws = new WebSocket(proto + "://" + location.host + "/ws");
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client"></script>
 
-                ws.onmessage = function(evt) {
-                    try {
-                        var data = JSON.parse(evt.data);
-                        if (data.waypoints) {
-                            render(data.waypoints);
-                        }
-                    } catch(e) {}
-                };
-
-                ws.onclose = function() {
-                    setTimeout(connect, reconnectDelay);
-                };
-
-                ws.onerror = function() {
-                    ws.close();
-                };
-            }
-
-            function render(waypoints) {
-                if (!waypoints || waypoints.length === 0) {
-                    content.innerHTML =
-                        '<div class="waiting">' +
-                        '  <p>No waypoints yet</p>' +
-                        '  <p style="font-size:14px">Add stops on the web dashboard</p>' +
-                        '</div>';
-                    return;
-                }
-
-                var groups = [];
-                for (var i = 0; i < waypoints.length; i += MAX_GROUP_SIZE) {
-                    groups.push(waypoints.slice(i, Math.min(i + MAX_GROUP_SIZE, waypoints.length)));
-                }
-
-                var html = '<div class="total">' + waypoints.length + ' stops total &middot; ' + groups.length + ' group' + (groups.length > 1 ? 's' : '') + '</div>';
-
-                for (var g = 0; g < groups.length; g++) {
-                    var grp = groups[g];
-                    var count = grp.length;
-                    var isFull = count >= MAX_GROUP_SIZE;
-                    var pct = Math.round((count / MAX_GROUP_SIZE) * 100);
-                    var statusClass = isFull ? "full" : "partial";
-                    var firstAddr = grp[0] ? grp[0].address : "";
-                    var lastAddr = grp[grp.length - 1] ? grp[grp.length - 1].address : "";
-
-                    html += '<div class="card" onclick=\'openMaps(' + JSON.stringify(grp).replace(/'/g, "&#39;") + ')\'>';
-                    html += '  <div class="card-body">';
-                    html += '    <div class="card-header">';
-                    html += '      <span class="card-title">Group ' + (g + 1) + '</span>';
-                    html += '      <span class="card-count ' + statusClass + '">' + count + ' of ' + MAX_GROUP_SIZE + ' stops</span>';
-                    html += '    </div>';
-                    html += '    <div class="progress-bar"><div class="progress-fill ' + statusClass + '" style="width:' + pct + '%"></div></div>';
-                    html += '    <div class="card-address">From: ' + escapeHtml(firstAddr) + '</div>';
-                    html += '    <div class="card-address">To: ' + escapeHtml(lastAddr) + '</div>';
-                    html += '  </div>';
-                    html += '  <div class="card-arrow">&#9654;</div>';
-                    html += '</div>';
-                }
-                content.innerHTML = html;
-            }
-
-            function escapeHtml(str) {
-                var div = document.createElement("div");
-                div.textContent = str;
-                return div.innerHTML;
-            }
-
-            window.openMaps = function(waypoints) {
-                if (!waypoints || waypoints.length < 2) return;
-                var origin = waypoints[0];
-                var dest = waypoints[waypoints.length - 1];
-                var via = waypoints.slice(1, -1);
-
-                var url = "https://www.google.com/maps/dir/?api=1"
-                    + "&origin=" + origin.latitude + "," + origin.longitude
-                    + "&destination=" + dest.latitude + "," + dest.longitude;
-
-                if (via.length > 0) {
-                    url += "&waypoints=" + via.map(function(w) {
-                        return w.latitude + "," + w.longitude;
-                    }).join("|");
-                }
-                url += "&travelmode=driving";
-                window.open(url, "_blank");
-            };
-
-            connect();
-        })();
-    </script>
+    <script src="/composeApp.js"></script>
 </body>
 </html>

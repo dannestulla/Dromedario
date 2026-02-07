@@ -1,5 +1,6 @@
 package br.gohan.dromedario.map
 
+import br.gohan.dromedario.MAPS_API_KEY
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.await
 import kotlin.js.Promise

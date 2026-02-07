@@ -12,6 +12,9 @@ if (config.devServer) {
         }
     });
 
+    // Enable SPA fallback for client-side routing (e.g., /export)
+    config.devServer.historyApiFallback = true;
+
     // Proxy API and WebSocket requests to the Ktor backend
     config.devServer.proxy = [
         {

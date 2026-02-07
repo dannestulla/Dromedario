@@ -3,10 +3,11 @@ package br.gohan.dromedario.presenter
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.gohan.dromedario.data.EventType
-import br.gohan.dromedario.data.GroupStatus
+import br.gohan.dromedario.data.GpxGenerator
 import br.gohan.dromedario.data.MessageModel
 import br.gohan.dromedario.data.MobileRepository
 import br.gohan.dromedario.data.RouteGroup
@@ -20,6 +21,8 @@ import io.github.aakira.napier.Napier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import androidx.core.net.toUri
+import java.io.File
 
 class MobileViewModel(
     private val mobileRepository: MobileRepository,
@@ -64,13 +67,6 @@ class MobileViewModel(
         }
     }
 
-    fun updateTripState(tripSession: TripSession) {
-        viewModelScope.launch {
-            _tripState.emit(tripSession)
-            Napier.d("MobileViewModel: Trip state updated - status: ${tripSession.status}, groups: ${tripSession.groups.size}")
-        }
-    }
-
     fun optimizeRoute() {
         viewModelScope.launch {
             Napier.d("MobileViewModel: Requesting route optimization")
@@ -106,17 +102,45 @@ class MobileViewModel(
         }
     }
 
-    fun startNextGroup() {
-        viewModelScope.launch {
-            Napier.d("MobileViewModel: Starting next group")
-            val message = MessageModel(event = EventType.GROUP_COMPLETED)
-            clientSharedViewModel.sendEvent(message)
-        }
-    }
-
     fun cancelNavigation() {
         viewModelScope.launch {
             _isNavigating.emit(false)
+        }
+    }
+
+    fun exportToGpx(context: Context) {
+        val trip = _tripState.value ?: run {
+            Napier.e("MobileViewModel: Cannot export GPX - no trip state")
+            return
+        }
+
+        if (trip.waypoints.isEmpty()) {
+            Napier.e("MobileViewModel: Cannot export GPX - no waypoints")
+            return
+        }
+
+        try {
+            val gpxContent = GpxGenerator.generateRoute(trip.waypoints)
+            val gpxFile = File(context.cacheDir, "dromedario-route.gpx")
+            gpxFile.writeText(gpxContent)
+
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                gpxFile
+            )
+
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/gpx+xml")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            val chooser = Intent.createChooser(intent, "Navigate with...")
+            context.startActivity(chooser)
+
+            Napier.d("MobileViewModel: GPX exported with ${trip.waypoints.size} waypoints")
+        } catch (e: Exception) {
+            Napier.e("MobileViewModel: Failed to export GPX: ${e.message}")
         }
     }
 
@@ -158,24 +182,9 @@ class MobileViewModel(
             uriBuilder.append("&waypoints=$waypointsParam")
         }
 
-        uriBuilder.append("&travelmode=driving")
+        uriBuilder.append("&travelmode=driving&dir_action=navigate")
 
-        return Uri.parse(uriBuilder.toString())
+        return uriBuilder.toString().toUri()
     }
 
-    fun getActiveGroupWaypoints(): List<Waypoint> {
-        val trip = _tripState.value ?: return emptyList()
-        val activeGroup = trip.groups.getOrNull(trip.activeGroupIndex) ?: return emptyList()
-        return trip.waypoints.subList(activeGroup.waypointStartIndex, activeGroup.waypointEndIndex)
-    }
-
-    fun getGroupProgress(): Pair<Int, Int> {
-        val trip = _tripState.value ?: return Pair(0, 0)
-        return Pair(trip.activeGroupIndex + 1, trip.groups.size)
-    }
-
-    fun getCompletedGroupsCount(): Int {
-        val trip = _tripState.value ?: return 0
-        return trip.groups.count { it.status == GroupStatus.COMPLETED }
-    }
 }

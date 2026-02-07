@@ -117,14 +117,16 @@ class MapController(containerId: String) {
         geocoder.geocode(request) { results, status ->
             val statusStr = status.toString()
             if (statusStr == "OK" && results != null) {
-                val address = results[0]?.formatted_address?.toString()
+                val resultsArray = results.unsafeCast<Array<dynamic>>()
+                val address = resultsArray.getOrNull(0)?.formatted_address?.toString()
                 if (!address.isNullOrBlank()) {
                     callback(address)
                 } else {
+                    Napier.w("Geocode returned empty address, using coords")
                     callback("$lat, $lng")
                 }
             } else {
-                Napier.e("Reverse geocode failed: $statusStr")
+                Napier.e("Reverse geocode failed: $statusStr - Make sure Geocoding API is enabled in Google Cloud Console")
                 callback("$lat, $lng")
             }
         }

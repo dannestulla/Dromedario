@@ -101,6 +101,13 @@ class ClientSharedViewModel(
         }
     }
 
+    fun clearAllWaypoints() {
+        viewModelScope.launch {
+            val message = MessageModel(event = EventType.CLEAR_ALL)
+            _outgoingFlow.emit(message)
+        }
+    }
+
     fun startWebSocket(url: String) {
         viewModelScope.launch {
             try {

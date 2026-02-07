@@ -1,8 +1,6 @@
 package br.gohan.dromedario.map
 
 import androidx.compose.runtime.*
-import br.gohan.dromedario.data.EventType
-import br.gohan.dromedario.data.MessageModel
 import br.gohan.dromedario.presenter.ClientSharedViewModel
 import io.github.aakira.napier.Napier
 import kotlinx.browser.window
@@ -12,7 +10,7 @@ import org.koin.compose.koinInject
 
 // Main web app screen. Manages map lifecycle, WebSocket connection, and autocomplete wiring.
 @Composable
-fun WebApp(token: String, viewModel: ClientSharedViewModel = koinInject()) {
+fun WebApp(token: String, onLogout: () -> Unit, viewModel: ClientSharedViewModel = koinInject()) {
     val mapsLoader: MapsLoader = koinInject()
     val routeState by viewModel.incomingFlow.collectAsState()
 
@@ -86,13 +84,38 @@ fun WebApp(token: String, viewModel: ClientSharedViewModel = koinInject()) {
             backgroundColor(Color.white)
         }
     }) {
-        H1({
+        // Header with logout button
+        Div({
             style {
+                display(DisplayStyle.Flex)
+                justifyContent(JustifyContent.SpaceBetween)
+                alignItems(AlignItems.Center)
                 marginBottom(16.px)
-                color(Color("#333"))
             }
         }) {
-            Text("Dromedario Route Planner")
+            H1({
+                style {
+                    color(Color("#333"))
+                    property("margin", "0")
+                }
+            }) {
+                Text("Dromedario Route Planner")
+            }
+
+            Button({
+                onClick { onLogout() }
+                style {
+                    padding(8.px, 16.px)
+                    backgroundColor(Color("#6c757d"))
+                    color(Color.white)
+                    border(0.px, LineStyle.None, Color.transparent)
+                    borderRadius(4.px)
+                    fontSize(14.px)
+                    cursor("pointer")
+                }
+            }) {
+                Text("Logout")
+            }
         }
 
         TripStatus(routeState.waypoints.size)
@@ -107,7 +130,10 @@ fun WebApp(token: String, viewModel: ClientSharedViewModel = koinInject()) {
         }) {
             H3 { Text("Add Waypoint") }
             Div({
-                style { width(100.percent) }
+                style {
+                    width(100.percent)
+                    backgroundColor(Color.white)
+                }
                 ref { element ->
                     searchInputRef = element
                     onDispose { searchInputRef = null }
@@ -116,9 +142,8 @@ fun WebApp(token: String, viewModel: ClientSharedViewModel = koinInject()) {
         }
 
         ActionButtons(routeState.waypoints) {
-            viewModel.sendEvent(MessageModel(event = EventType.FINALIZE_ROUTE))
+            viewModel.clearAllWaypoints()
         }
         MyLocationButton(mapController)
-        NavigationStatus()
     }
 }

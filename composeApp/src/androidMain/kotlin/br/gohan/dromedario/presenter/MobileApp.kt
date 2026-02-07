@@ -93,7 +93,8 @@ fun NavigationControlsSection(
                 onOptimize = { viewModel.optimizeRoute() },
                 onFinalize = { viewModel.finalizeRoute() },
                 onStartNavigation = { viewModel.startNavigation(context) },
-                onCancelNavigation = { viewModel.cancelNavigation() }
+                onCancelNavigation = { viewModel.cancelNavigation() },
+                onExportGpx = { viewModel.exportToGpx(context) }
             )
         }
     }
@@ -106,14 +107,16 @@ fun NavigationControls(
     onOptimize: () -> Unit,
     onFinalize: () -> Unit,
     onStartNavigation: () -> Unit,
-    onCancelNavigation: () -> Unit
+    onCancelNavigation: () -> Unit,
+    onExportGpx: () -> Unit
 ) {
     when (tripState?.status) {
         TripStatus.PLANNING -> {
             PlanningControls(
                 waypointCount = tripState.waypoints.size,
                 onOptimize = onOptimize,
-                onFinalize = onFinalize
+                onFinalize = onFinalize,
+                onExportGpx = onExportGpx
             )
         }
         TripStatus.NAVIGATING -> {
@@ -140,7 +143,8 @@ fun NavigationControls(
 private fun PlanningControls(
     waypointCount: Int,
     onOptimize: () -> Unit,
-    onFinalize: () -> Unit
+    onFinalize: () -> Unit,
+    onExportGpx: () -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
@@ -173,10 +177,21 @@ private fun PlanningControls(
                 Text("Finalize Route")
             }
         }
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(
+            onClick = onExportGpx,
+            enabled = waypointCount >= 2,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF28A745)
+            )
+        ) {
+            Text("Export GPX for Navigation Apps")
+        }
         if (waypointCount < 2) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Add at least 2 waypoints to finalize",
+                text = "Add at least 2 waypoints to export",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
