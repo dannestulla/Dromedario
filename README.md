@@ -2,13 +2,15 @@
 
 A multi-stop route planning app that overcomes Google Maps' 9-waypoint limit. Plan routes on the web, export to any GPX-compatible navigation app.
 
-## Features
+![Web Dashboard](readme-screenshot-1.jpg)
+![Mobile App](readme-screenshot-2.jpg)
 
-- Unlimited waypoints with real-time sync
-- Google Maps integration with Places Autocomplete
-- GPX export for OsmAnd, Locus Map, Organic Maps
-- Route optimization via Google Routes API
-- Google Sign-In authentication
+## How It Works
+
+1. **Plan on Web** — Open the web dashboard, search addresses or click the map to add stops. Drag to reorder.
+2. **Sync to Mobile** — The Android app receives waypoints in real-time via WebSocket.
+3. **Auto-group** — Routes are split into groups of 9 (Google Maps limit). Navigate one group, then continue to the next.
+4. **Export** — Download GPX file to use with OsmAnd, Locus Map, or any navigation app that supports multi-stop routes.
 
 ## Tech Stack
 

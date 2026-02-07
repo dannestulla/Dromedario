@@ -51,7 +51,7 @@ fun ExportApp(token: String, onLogout: () -> Unit, viewModel: ClientSharedViewMo
                     property("margin", "0")
                 }
             }) {
-                Text("Dromedario / Export to Google Maps")
+                Text("Dromedario / Export")
             }
 
             Button({
