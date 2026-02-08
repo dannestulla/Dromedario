@@ -21,15 +21,13 @@ import kotlin.time.Duration.Companion.seconds
 val sessions = Collections.synchronizedSet(mutableSetOf<WebSocketServerSession>())
 
 suspend fun main() {
-    // Load secrets from secrets.properties
-    secrets = loadSecrets()
-
     val db = DatabaseManager()
     db.setup()
 
     Napier.base(DebugAntilog())
 
-    embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0") {
+    val port = System.getenv("PORT")?.toIntOrNull() ?: SERVER_PORT
+    embeddedServer(Netty, port = port, host = "0.0.0.0") {
         install(WebSockets) {
             pingPeriod = 15.seconds
             timeout = 15.seconds

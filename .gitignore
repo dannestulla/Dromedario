@@ -18,3 +18,4 @@ captures
 **/xcshareddata/WorkspaceSettings.xcsettings
 /composeApp/src/jsMain/kotlin/br/gohan/dromedario/JsSecrets.kt
 secrets.properties
+.env

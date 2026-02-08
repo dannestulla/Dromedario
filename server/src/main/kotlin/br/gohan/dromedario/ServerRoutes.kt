@@ -16,8 +16,11 @@ import io.ktor.server.http.content.staticFiles
 import io.ktor.server.http.content.staticResources
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
+import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import io.ktor.http.ContentType
+import io.ktor.server.response.respondText
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
@@ -42,6 +45,7 @@ fun Application.module(db: DatabaseManager) {
         environment.config.propertyOrNull("google.routesApiKey")?.getString() ?: ""
     }
     val googleClientId = getSecret("GOOGLE_CLIENT_ID").ifEmpty { "" }
+    val mapsApiKey = getSecret("MAPS_API_KEY").ifEmpty { "" }
 
     val authService = AuthService(jwtSecret, appPassword, googleClientId)
     val routeOptimizer = if (routesApiKey.isNotEmpty()) RouteOptimizer(routesApiKey) else null
@@ -140,6 +144,14 @@ fun Application.module(db: DatabaseManager) {
             }
         }
 
+        // Serve index.html with environment variables injected
+        get("/") {
+            val indexHtml = this::class.java.classLoader.getResource("web/index.html")?.readText()
+                ?: return@get call.respond(HttpStatusCode.NotFound)
+            val templated = indexHtml.replace("{{MAPS_API_KEY}}", mapsApiKey)
+            call.respondText(templated, ContentType.Text.Html)
+        }
+
         // Serve compiled Kotlin/JS from webpack output (development)
         val webpackDir = File("../composeApp/build/kotlin-webpack/js/developmentExecutable")
         if (webpackDir.exists()) {
@@ -151,9 +163,7 @@ fun Application.module(db: DatabaseManager) {
             default("index.html")
         }
 
-        // Static file hosting for web client (must be last)
-        staticResources("/", "web") {
-            default("index.html")
-        }
+        // Static file hosting for web client (JS, CSS, etc.)
+        staticResources("/", "web")
     }
 }

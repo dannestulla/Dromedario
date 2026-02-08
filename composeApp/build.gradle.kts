@@ -130,13 +130,13 @@ android {
     }
 
     secrets {
-        propertiesFileName = "secrets.properties"
+        propertiesFileName = ".env"
     }
 }
 
-// Generate JsSecrets.kt from secrets.properties for the JS target
+// Generate JsSecrets.kt from .env for the JS target
 val generateJsSecrets by tasks.registering {
-    val secretsFile = rootProject.file("secrets.properties")
+    val secretsFile = rootProject.file(".env")
     val outputDir = layout.buildDirectory.dir("generated/jsSecrets/br/gohan/dromedario")
     inputs.file(secretsFile).optional()
     outputs.dir(outputDir)

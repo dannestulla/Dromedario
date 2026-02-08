@@ -26,7 +26,8 @@ class DatabaseManager {
     }
 
     suspend fun setup() {
-        mongoClient = KMongo.createClient("mongodb://localhost:27017").coroutine
+        val mongoUri = getSecret("MONGO_URI", "mongodb://localhost:27017")
+        mongoClient = KMongo.createClient(mongoUri).coroutine
         val database = mongoClient.getDatabase("route_planner")
         sessionCollection = database.getCollection<RouteStateModel>("sessions")
         tripSessionCollection = database.getCollection<TripSession>("trip_sessions")
