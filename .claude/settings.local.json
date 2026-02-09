@@ -18,7 +18,20 @@
       "Bash(git stash:*)",
       "Bash(cmd /c \"gradlew.bat :composeApp:jsBrowserDevelopmentWebpack 2>&1\")",
       "Bash(cmd.exe:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(docker info:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(gradlew composeApp:jsBrowserDistribution:*)",
+      "Bash(cmd /c:*)",
+      "Bash(powershell:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker-compose build:*)",
+      "Bash(docker logs:*)",
+      "Bash(ngrok:*)",
+      "Bash(python -c:*)",
+      "Bash(tasklist:*)",
+      "Bash(taskkill:*)",
+      "Bash(start ngrok:*)"
     ]
   }
 }

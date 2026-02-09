@@ -3,8 +3,12 @@ package br.gohan.dromedario
 import java.io.File
 
 private val envVars: Map<String, String> by lazy {
-    val envFile = File(".env")
-    if (envFile.exists()) {
+    // Check current directory, then parent (for when Gradle runs from server/)
+    val possiblePaths = listOf(".env", "../.env")
+    val envFile = possiblePaths.map { File(it) }.firstOrNull { it.exists() }
+
+    if (envFile != null) {
+        println("Loaded .env from: ${envFile.absolutePath}")
         envFile.readLines()
             .filter { it.isNotBlank() && !it.startsWith("#") && it.contains("=") }
             .associate { line ->
@@ -12,7 +16,7 @@ private val envVars: Map<String, String> by lazy {
                 key.trim() to value.trim()
             }
     } else {
-        println("Warning: .env not found, using environment variables only")
+        println("Warning: .env not found in ${File(".").absolutePath}, using environment variables only")
         emptyMap()
     }
 }

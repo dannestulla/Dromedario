@@ -1,18 +1,12 @@
 package br.gohan.dromedario.export
 
 import androidx.compose.runtime.*
-import br.gohan.dromedario.data.GpxGenerator
 import br.gohan.dromedario.data.Waypoint
 import br.gohan.dromedario.presenter.ClientSharedViewModel
-import kotlinx.browser.document
 import kotlinx.browser.window
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import org.koin.compose.koinInject
-import org.w3c.dom.HTMLAnchorElement
-import org.w3c.dom.url.URL
-import org.w3c.files.Blob
-import org.w3c.files.BlobPropertyBag
 
 private const val MAX_GROUP_SIZE = 9
 
@@ -100,7 +94,7 @@ fun ExportApp(token: String, onLogout: () -> Unit, viewModel: ClientSharedViewMo
                 }
             }) {
                 Button({
-                    onClick { exportGpx(waypoints) }
+                    onClick { exportGpx(token) }
                     style {
                         width(100.percent)
                         padding(16.px)
@@ -316,16 +310,14 @@ private fun openGoogleMaps(waypoints: List<Waypoint>) {
     window.open(url, "_blank")
 }
 
-private fun exportGpx(waypoints: List<Waypoint>) {
-    val gpxContent = GpxGenerator.generateRoute(waypoints)
-    val blob = Blob(arrayOf(gpxContent), BlobPropertyBag(type = "application/gpx+xml"))
-    val url = URL.createObjectURL(blob)
+private fun exportGpx(token: String) {
+    // Navigate to server endpoint - this will serve the GPX file with proper headers
+    // Android will show "Open with" dialog for apps that handle GPX files
+    val host = window.location.host
+    val protocol = window.location.protocol
+    val gpxUrl = "$protocol//$host/api/gpx?token=$token"
 
-    val anchor = document.createElement("a") as HTMLAnchorElement
-    anchor.href = url
-    anchor.download = "dromedario-route.gpx"
-    anchor.click()
-
-    URL.revokeObjectURL(url)
+    // Open in same window to trigger Android's file handler
+    window.location.href = gpxUrl
 }
 

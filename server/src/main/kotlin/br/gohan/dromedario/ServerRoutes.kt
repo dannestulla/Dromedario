@@ -5,6 +5,7 @@ import br.gohan.dromedario.auth.ErrorResponse
 import br.gohan.dromedario.auth.GoogleLoginRequest
 import br.gohan.dromedario.auth.LoginRequest
 import br.gohan.dromedario.auth.LoginResponse
+import br.gohan.dromedario.data.GpxGenerator
 import br.gohan.dromedario.data.MessageModel
 import br.gohan.dromedario.routes.RouteOptimizer
 import io.github.aakira.napier.Napier
@@ -20,6 +21,9 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.http.ContentType
+import io.ktor.http.ContentDisposition
+import io.ktor.http.HttpHeaders
+import io.ktor.server.response.header
 import io.ktor.server.response.respondText
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.CloseReason
@@ -80,6 +84,33 @@ fun Application.module(db: DatabaseManager) {
                 Napier.e("Google auth error: ${e.message}")
                 call.respond(HttpStatusCode.BadRequest, ErrorResponse("Authentication failed"))
             }
+        }
+
+        // GPX download endpoint - serves GPX file that Android can "Open with"
+        get("/api/gpx") {
+            val token = call.request.queryParameters["token"]
+            if (token == null || !authService.validateToken(token)) {
+                call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Authentication required"))
+                return@get
+            }
+
+            val currentState = db.getCurrentState()
+            if (currentState.waypoints.isEmpty()) {
+                call.respond(HttpStatusCode.NotFound, ErrorResponse("No waypoints to export"))
+                return@get
+            }
+
+            val gpxContent = GpxGenerator.generateRoute(currentState.waypoints)
+
+            // Set headers for Android to recognize this as a file to "Open with"
+            call.response.header(
+                HttpHeaders.ContentDisposition,
+                ContentDisposition.Attachment.withParameter(
+                    ContentDisposition.Parameters.FileName, "dromedario-route.gpx"
+                ).toString()
+            )
+
+            call.respondText(gpxContent, ContentType("application", "gpx+xml"))
         }
 
         // WebSocket endpoint (auth required)
