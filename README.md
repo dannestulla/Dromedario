@@ -2,13 +2,19 @@
 
 A multi-stop route planning app that overcomes Google Maps' 9-waypoint limit. Plan routes on the web, export to any GPX-compatible navigation app.
 
+## Live Demo
+
+**Web Dashboard:** [https://dromedario-6c6a.onrender.com](https://dromedario-6c6a.onrender.com)
+
+**Mobile Export:** Open [https://dromedario-6c6a.onrender.com/export](https://dromedario-6c6a.onrender.com/export) on your phone to see the route in real-time and export to navigation apps.
+
 ![Web Dashboard](readme-screenshot-1.jpg)
 ![Mobile App](readme-screenshot-2.jpg)
 
 ## How It Works
 
-1. **Plan on Web** — Open the web dashboard, search addresses or click the map to add stops. Drag to reorder.
-2. **Sync to Mobile** — Open the export page on your phone to see the route in real-time via WebSocket.
+1. **Plan on Web** — Open the web dashboard on your computer, search addresses or click the map to add stops. Drag to reorder.
+2. **Sync to Mobile** — Open `/export` on your phone's browser. The route syncs in real-time via WebSocket.
 3. **Auto-group** — Routes are split into groups of 9 (Google Maps limit). Navigate one group, then continue to the next.
 4. **Export GPX** — Tap "Export GPX" on mobile to download and open directly in OsmAnd, Locus Map, Organic Maps, or any navigation app that supports GPX routes.
 
