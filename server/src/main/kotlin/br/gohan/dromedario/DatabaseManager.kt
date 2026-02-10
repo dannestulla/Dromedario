@@ -4,8 +4,11 @@ import br.gohan.dromedario.data.RouteStateModel
 import br.gohan.dromedario.data.TripSession
 import br.gohan.dromedario.data.TripStatus
 import br.gohan.dromedario.data.Waypoint
+import com.mongodb.ConnectionString
+import com.mongodb.MongoClientSettings
 import com.mongodb.client.model.Indexes
 import com.mongodb.client.model.Updates
+import com.mongodb.connection.ConnectionPoolSettings
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import org.litote.kmongo.coroutine.CoroutineClient
@@ -13,6 +16,7 @@ import org.litote.kmongo.coroutine.CoroutineCollection
 import org.litote.kmongo.coroutine.coroutine
 import org.litote.kmongo.eq
 import org.litote.kmongo.reactivestreams.KMongo
+import java.util.concurrent.TimeUnit
 
 class DatabaseManager {
     private lateinit var mongoClient: CoroutineClient
@@ -28,7 +32,28 @@ class DatabaseManager {
     suspend fun setup() {
         val mongoUri = getSecret("MONGO_URI", "mongodb://localhost:27017")
         println("Connecting to MongoDB... (URI starts with: ${mongoUri.take(30)}...)")
-        mongoClient = KMongo.createClient(mongoUri).coroutine
+
+        // Configure connection pool properly for serverless environments
+        val connectionString = ConnectionString(mongoUri)
+        val settings = MongoClientSettings.builder()
+            .applyConnectionString(connectionString)
+            .applyToConnectionPoolSettings { builder ->
+                builder.maxSize(50)
+                    .minSize(5)
+                    .maxWaitTime(30, TimeUnit.SECONDS)
+                    .maxConnectionIdleTime(60, TimeUnit.SECONDS)
+            }
+            .applyToSocketSettings { builder ->
+                builder.connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+            }
+            .applyToClusterSettings { builder ->
+                builder.serverSelectionTimeout(30, TimeUnit.SECONDS)
+            }
+            .build()
+
+        mongoClient = KMongo.createClient(settings).coroutine
+        println("MongoDB client created with pool: maxSize=50, minSize=5")
         val database = mongoClient.getDatabase("route_planner")
         sessionCollection = database.getCollection<RouteStateModel>("sessions")
         tripSessionCollection = database.getCollection<TripSession>("trip_sessions")

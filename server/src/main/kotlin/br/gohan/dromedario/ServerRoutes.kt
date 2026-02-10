@@ -12,7 +12,10 @@ import io.github.aakira.napier.Napier
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.http.HttpStatusCode
+import io.ktor.events.EventDefinition
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStarted
+import kotlinx.coroutines.runBlocking
 import io.ktor.server.http.content.staticFiles
 import io.ktor.server.http.content.staticResources
 import io.ktor.server.request.receive
@@ -38,6 +41,19 @@ import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalTime::class)
 fun Application.module(db: DatabaseManager) {
+    // Initialize database after server starts (so Render sees the port first)
+    monitor.subscribe(ApplicationStarted) {
+        runBlocking {
+            try {
+                db.setup()
+                Napier.i("MongoDB connected successfully")
+            } catch (e: Exception) {
+                Napier.e("MongoDB connection failed: ${e.message}")
+                // Server continues running even if DB fails
+            }
+        }
+    }
+
     // Read secrets from secrets.properties (falls back to application.conf defaults)
     val jwtSecret = getSecret("JWT_SECRET").ifEmpty {
         environment.config.propertyOrNull("jwt.secret")?.getString() ?: "dev-secret-change-in-production"

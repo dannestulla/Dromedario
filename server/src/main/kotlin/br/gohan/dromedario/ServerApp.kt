@@ -21,12 +21,14 @@ import kotlin.time.Duration.Companion.seconds
 val sessions = Collections.synchronizedSet(mutableSetOf<WebSocketServerSession>())
 
 suspend fun main() {
-    val db = DatabaseManager()
-    db.setup()
-
     Napier.base(DebugAntilog())
 
     val port = System.getenv("PORT")?.toIntOrNull() ?: SERVER_PORT
+    println("Starting server on port $port...")
+
+    val db = DatabaseManager()
+
+    // Start server first so Render sees the port, then connect to DB
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
         install(WebSockets) {
             pingPeriod = 15.seconds
