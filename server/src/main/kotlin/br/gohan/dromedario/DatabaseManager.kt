@@ -27,6 +27,7 @@ class DatabaseManager {
 
     suspend fun setup() {
         val mongoUri = getSecret("MONGO_URI", "mongodb://localhost:27017")
+        println("Connecting to MongoDB... (URI starts with: ${mongoUri.take(30)}...)")
         mongoClient = KMongo.createClient(mongoUri).coroutine
         val database = mongoClient.getDatabase("route_planner")
         sessionCollection = database.getCollection<RouteStateModel>("sessions")
